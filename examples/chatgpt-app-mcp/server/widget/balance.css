@@ -1,0 +1,184 @@
+/*
+ * mcp-savvy chatgpt-app-mcp credit-balance widget styles.
+ *
+ * Honors ChatGPT's host theme via `:root[data-theme]`; the widget
+ * JS mirrors `window.openai.theme` onto that attribute. All colors
+ * are sourced from CSS variables so the same stylesheet renders
+ * cleanly in light, dark, and system-preference modes.
+ */
+
+:root {
+    color-scheme: light dark;
+    --fg: #0e1116;
+    --fg-muted: rgba(14, 17, 22, 0.62);
+    --fg-faint: rgba(14, 17, 22, 0.42);
+    --bg: transparent;
+    --surface: rgba(14, 17, 22, 0.04);
+    --surface-strong: rgba(14, 17, 22, 0.08);
+    --border: rgba(14, 17, 22, 0.10);
+    --accent: #0c8a4a;
+    --warn: #b56300;
+    --error: #c53030;
+    --radius: 16px;
+    --pad-y: 20px;
+    --pad-x: 24px;
+}
+
+:root[data-theme="dark"] {
+    --fg: #f5f7fa;
+    --fg-muted: rgba(245, 247, 250, 0.62);
+    --fg-faint: rgba(245, 247, 250, 0.40);
+    --surface: rgba(245, 247, 250, 0.05);
+    --surface-strong: rgba(245, 247, 250, 0.10);
+    --border: rgba(245, 247, 250, 0.12);
+    --accent: #4ade80;
+    --warn: #fbbf24;
+    --error: #fca5a5;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+}
+
+body {
+    color: var(--fg);
+    background: var(--bg);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: 4px;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: var(--pad-y) var(--pad-x);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(135deg, var(--surface-strong) 0%, var(--surface) 60%, transparent 100%),
+        var(--surface);
+    width: 100%;
+}
+
+.card[data-state="error"] {
+    border-color: color-mix(in srgb, var(--error) 40%, var(--border));
+}
+
+.card[data-state="expired"] {
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--fg-muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.header .lock {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+}
+
+.header[data-state="error"] .lock {
+    color: var(--error);
+}
+
+.header[data-state="expired"] .lock {
+    color: var(--warn);
+}
+
+.amount {
+    font-size: 36px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+}
+
+.amount .skeleton {
+    width: 168px;
+    height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+            var(--surface) 0%,
+            var(--surface-strong) 50%,
+            var(--surface) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 12px;
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.meta .sep {
+    color: var(--fg-faint);
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--fg-faint);
+}
+
+.footer .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--fg-muted);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.footer .badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+.footer[data-state="error"] .badge .dot {
+    background: var(--error);
+}
+
+.footer[data-state="expired"] .badge .dot {
+    background: var(--warn);
+}

@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: gateway-3lo-mcp
+title: Gateway + GitHub 3LO MCP
+matrixCell: C
+backend: gateway
+fronting: direct
+status: validated
+statusNote: full 3LO chain live against GitHub (2026-05-28)
+tagline: >-
+  The "list my GitHub repositories" demo — an AgentCore Gateway with a GitHub
+  OpenAPI target and the full third-party OAuth (3LO) consent flow handled
+  transparently by the bridge.
+useCase: >-
+  Reach a partner API (GitHub, Slack, …) on the user's behalf. The first tool
+  call returns -32042 UrlElicitationRequired; the bridge opens the consent
+  page, completes session binding via OAuthCompleteSessionApi, and retries —
+  the host just sees a successful result.
+hostTools:
+  - name: github___getAuthenticatedUser
+    summary: Returns the signed-in user's GitHub profile.
+  - name: github___listUserRepos
+    summary: Lists the user's repositories after 3LO consent.
+constructs:
+  - CognitoAuth
+  - AgentCoreGateway
+  - OAuthCompleteSessionApi
+stacks:
+  - id: McpSavvy3loDemoCognito
+    summary: Cognito user pool that gates the gateway.
+  - id: McpSavvy3loDemoGateway
+    summary: AgentCore Gateway (GitHub OpenAPI target) + OAuthCompleteSessionApi.
+identityProviders:
+  - cognito
+makePrefix: example-gateway-3lo
+toolMode: search-local
+relatedExamples:
+  - gateway-lambda-mcp

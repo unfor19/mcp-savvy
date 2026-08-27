@@ -1,0 +1,23 @@
+[project]
+name = "mcp-savvy-kb-agent"
+version = "0.0.0"
+description = "Strands agent over a Bedrock Knowledge Base for the mcp-savvy kb-mcp example."
+license = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    "bedrock-agentcore>=1.11.0",
+    "boto3>=1.40.0",
+    "mcp>=1.16.0",
+    "strands-agents>=1.41.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tools"]
+only-include = ["agent.py", "limits.py", "system_prompt.md", "tools"]
+
+[tool.uv]
+package = false

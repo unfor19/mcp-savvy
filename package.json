@@ -1,0 +1,45 @@
+{
+    "name": "mcp-savvy-monorepo",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Toolkit for shipping protected MCP servers on AWS — auth, storage, bridge, CDK constructs.",
+    "license": "MIT",
+    "homepage": "https://github.com/unfor19/mcp-savvy#readme",
+    "bugs": {
+        "url": "https://github.com/unfor19/mcp-savvy/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/unfor19/mcp-savvy.git"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "packageManager": "pnpm@10.27.0",
+    "scripts": {
+        "build": "pnpm -r --filter './packages/*' build",
+        "clean": "pnpm -r --filter './packages/*' clean && rm -rf node_modules",
+        "lint": "pnpm -r --filter './packages/*' lint",
+        "typecheck": "pnpm -r --filter './packages/*' typecheck",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "devDependencies": {
+        "@aws-sdk/client-bedrock-agent": "^3.1120.0",
+        "@aws-sdk/client-s3": "^3.1120.0",
+        "@types/node": "^22.20.1",
+        "@vitest/coverage-v8": "^4.1.11",
+        "fast-check": "^4.9.0",
+        "typescript": "^5.9.3",
+        "vite": "^8.2.2",
+        "vitest": "^4.1.11",
+        "yaml": "^2.9.0"
+    },
+    "pnpm": {
+        "overrides": {
+            "tsup>esbuild": "^0.28.2"
+        }
+    },
+    "type": "module"
+}

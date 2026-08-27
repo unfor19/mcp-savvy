@@ -1,0 +1,504 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CognitoAuth — snapshot > matches the synthesized template (defaults) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "AuthHumanClientBrandingBEC7635F": {
+      "Properties": {
+        "ClientId": {
+          "Ref": "AuthUserPoolHumanClientB3C2C458",
+        },
+        "UseCognitoProvidedValues": true,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::ManagedLoginBranding",
+    },
+    "AuthUserPool8115E87F": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-COG8",
+              "reason": "Cognito Plus tier is a paid feature. Production deployments should opt in by enabling advanced security at the Plus tier.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Name": "verified_email",
+              "Priority": 1,
+            },
+          ],
+        },
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+        },
+        "AutoVerifiedAttributes": [
+          "email",
+        ],
+        "EmailVerificationMessage": "The verification code to your new account is {####}",
+        "EmailVerificationSubject": "Verify your new account",
+        "EnabledMfas": [
+          "SOFTWARE_TOKEN_MFA",
+        ],
+        "MfaConfiguration": "ON",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+            "TemporaryPasswordValidityDays": 7,
+          },
+        },
+        "Schema": [
+          {
+            "Mutable": false,
+            "Name": "email",
+            "Required": true,
+          },
+        ],
+        "SmsVerificationMessage": "The verification code to your new account is {####}",
+        "UserPoolName": "mcp-savvy",
+        "UsernameAttributes": [
+          "email",
+        ],
+        "VerificationMessageTemplate": {
+          "DefaultEmailOption": "CONFIRM_WITH_CODE",
+          "EmailMessage": "The verification code to your new account is {####}",
+          "EmailSubject": "Verify your new account",
+          "SmsMessage": "The verification code to your new account is {####}",
+        },
+      },
+      "Type": "AWS::Cognito::UserPool",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "AuthUserPoolDomain31C6792A": {
+      "Properties": {
+        "Domain": "mcp-savvy-test",
+        "ManagedLoginVersion": 2,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolDomain",
+    },
+    "AuthUserPoolHumanClientB3C2C458": {
+      "Properties": {
+        "AccessTokenValidity": 60,
+        "AllowedOAuthFlows": [
+          "code",
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "profile",
+        ],
+        "CallbackURLs": [
+          "http://localhost:33423/callback",
+          "http://127.0.0.1:33423/callback",
+          "http://localhost:33418/callback",
+          "http://127.0.0.1:33418/callback",
+        ],
+        "ClientName": "mcp-savvy-human",
+        "EnableTokenRevocation": true,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+        "GenerateSecret": false,
+        "IdTokenValidity": 60,
+        "PreventUserExistenceErrors": "ENABLED",
+        "RefreshTokenValidity": 43200,
+        "SupportedIdentityProviders": [
+          "COGNITO",
+        ],
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "minutes",
+        },
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolClient",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`CognitoAuth — snapshot > matches the synthesized template (managedLogin: classic) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "AuthUserPool8115E87F": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-COG8",
+              "reason": "Cognito Plus tier is a paid feature. Production deployments should opt in by enabling advanced security at the Plus tier.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Name": "verified_email",
+              "Priority": 1,
+            },
+          ],
+        },
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+        },
+        "AutoVerifiedAttributes": [
+          "email",
+        ],
+        "EmailVerificationMessage": "The verification code to your new account is {####}",
+        "EmailVerificationSubject": "Verify your new account",
+        "EnabledMfas": [
+          "SOFTWARE_TOKEN_MFA",
+        ],
+        "MfaConfiguration": "ON",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+            "TemporaryPasswordValidityDays": 7,
+          },
+        },
+        "Schema": [
+          {
+            "Mutable": false,
+            "Name": "email",
+            "Required": true,
+          },
+        ],
+        "SmsVerificationMessage": "The verification code to your new account is {####}",
+        "UserPoolName": "mcp-savvy",
+        "UsernameAttributes": [
+          "email",
+        ],
+        "VerificationMessageTemplate": {
+          "DefaultEmailOption": "CONFIRM_WITH_CODE",
+          "EmailMessage": "The verification code to your new account is {####}",
+          "EmailSubject": "Verify your new account",
+          "SmsMessage": "The verification code to your new account is {####}",
+        },
+      },
+      "Type": "AWS::Cognito::UserPool",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "AuthUserPoolDomain31C6792A": {
+      "Properties": {
+        "Domain": "mcp-savvy-test",
+        "ManagedLoginVersion": 1,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolDomain",
+    },
+    "AuthUserPoolHumanClientB3C2C458": {
+      "Properties": {
+        "AccessTokenValidity": 60,
+        "AllowedOAuthFlows": [
+          "code",
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "profile",
+        ],
+        "CallbackURLs": [
+          "http://localhost:33423/callback",
+          "http://127.0.0.1:33423/callback",
+          "http://localhost:33418/callback",
+          "http://127.0.0.1:33418/callback",
+        ],
+        "ClientName": "mcp-savvy-human",
+        "EnableTokenRevocation": true,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+        "GenerateSecret": false,
+        "IdTokenValidity": 60,
+        "PreventUserExistenceErrors": "ENABLED",
+        "RefreshTokenValidity": 43200,
+        "SupportedIdentityProviders": [
+          "COGNITO",
+        ],
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "minutes",
+        },
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolClient",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`CognitoAuth — snapshot > matches the synthesized template (mfaRequired: false) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "AuthHumanClientBrandingBEC7635F": {
+      "Properties": {
+        "ClientId": {
+          "Ref": "AuthUserPoolHumanClientB3C2C458",
+        },
+        "UseCognitoProvidedValues": true,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::ManagedLoginBranding",
+    },
+    "AuthUserPool8115E87F": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-COG2",
+              "is_reason_encoded": true,
+              "reason": "TUZBIHdhcyBleHBsaWNpdGx5IHJlbGF4ZWQgdmlhIG1mYVJlcXVpcmVkOiBmYWxzZS4gVGhpcyBpcyBpbnRlbmRlZCBmb3IgZmlyc3QtcnVuIGRlbW9zIG9ubHkg4oCUIGV2ZXJ5IHByb2R1Y3Rpb24gZGVwbG95bWVudCBzaG91bGQgbGVhdmUgdGhlIGRlZmF1bHQgbWZhUmVxdWlyZWQ6IHRydWUu",
+            },
+            {
+              "id": "AwsSolutions-COG8",
+              "reason": "Cognito Plus tier is a paid feature. Production deployments should opt in by enabling advanced security at the Plus tier.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Name": "verified_email",
+              "Priority": 1,
+            },
+          ],
+        },
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+        },
+        "AutoVerifiedAttributes": [
+          "email",
+        ],
+        "EmailVerificationMessage": "The verification code to your new account is {####}",
+        "EmailVerificationSubject": "Verify your new account",
+        "EnabledMfas": [
+          "SOFTWARE_TOKEN_MFA",
+        ],
+        "MfaConfiguration": "OPTIONAL",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+            "TemporaryPasswordValidityDays": 7,
+          },
+        },
+        "Schema": [
+          {
+            "Mutable": false,
+            "Name": "email",
+            "Required": true,
+          },
+        ],
+        "SmsVerificationMessage": "The verification code to your new account is {####}",
+        "UserPoolName": "mcp-savvy",
+        "UsernameAttributes": [
+          "email",
+        ],
+        "VerificationMessageTemplate": {
+          "DefaultEmailOption": "CONFIRM_WITH_CODE",
+          "EmailMessage": "The verification code to your new account is {####}",
+          "EmailSubject": "Verify your new account",
+          "SmsMessage": "The verification code to your new account is {####}",
+        },
+      },
+      "Type": "AWS::Cognito::UserPool",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "AuthUserPoolDomain31C6792A": {
+      "Properties": {
+        "Domain": "mcp-savvy-test",
+        "ManagedLoginVersion": 2,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolDomain",
+    },
+    "AuthUserPoolHumanClientB3C2C458": {
+      "Properties": {
+        "AccessTokenValidity": 60,
+        "AllowedOAuthFlows": [
+          "code",
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "profile",
+        ],
+        "CallbackURLs": [
+          "http://localhost:33423/callback",
+          "http://127.0.0.1:33423/callback",
+          "http://localhost:33418/callback",
+          "http://127.0.0.1:33418/callback",
+        ],
+        "ClientName": "mcp-savvy-human",
+        "EnableTokenRevocation": true,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+        "GenerateSecret": false,
+        "IdTokenValidity": 60,
+        "PreventUserExistenceErrors": "ENABLED",
+        "RefreshTokenValidity": 43200,
+        "SupportedIdentityProviders": [
+          "COGNITO",
+        ],
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "minutes",
+        },
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolClient",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;

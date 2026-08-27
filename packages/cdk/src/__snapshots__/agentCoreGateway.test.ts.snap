@@ -1,0 +1,374 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AgentCoreGateway — snapshot > matches the synthesized template (Cognito IdP) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "AuthHumanClientBrandingBEC7635F": {
+      "Properties": {
+        "ClientId": {
+          "Ref": "AuthUserPoolHumanClientB3C2C458",
+        },
+        "UseCognitoProvidedValues": true,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::ManagedLoginBranding",
+    },
+    "AuthUserPool8115E87F": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-COG8",
+              "reason": "Cognito Plus tier is a paid feature. Production deployments should opt in by enabling advanced security at the Plus tier.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Name": "verified_email",
+              "Priority": 1,
+            },
+          ],
+        },
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+        },
+        "AutoVerifiedAttributes": [
+          "email",
+        ],
+        "EmailVerificationMessage": "The verification code to your new account is {####}",
+        "EmailVerificationSubject": "Verify your new account",
+        "EnabledMfas": [
+          "SOFTWARE_TOKEN_MFA",
+        ],
+        "MfaConfiguration": "ON",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+            "TemporaryPasswordValidityDays": 7,
+          },
+        },
+        "Schema": [
+          {
+            "Mutable": false,
+            "Name": "email",
+            "Required": true,
+          },
+        ],
+        "SmsVerificationMessage": "The verification code to your new account is {####}",
+        "UserPoolName": "mcp-savvy",
+        "UsernameAttributes": [
+          "email",
+        ],
+        "VerificationMessageTemplate": {
+          "DefaultEmailOption": "CONFIRM_WITH_CODE",
+          "EmailMessage": "The verification code to your new account is {####}",
+          "EmailSubject": "Verify your new account",
+          "SmsMessage": "The verification code to your new account is {####}",
+        },
+      },
+      "Type": "AWS::Cognito::UserPool",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "AuthUserPoolDomain31C6792A": {
+      "Properties": {
+        "Domain": "mcp-savvy-test",
+        "ManagedLoginVersion": 2,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolDomain",
+    },
+    "AuthUserPoolHumanClientB3C2C458": {
+      "Properties": {
+        "AccessTokenValidity": 60,
+        "AllowedOAuthFlows": [
+          "code",
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "profile",
+        ],
+        "CallbackURLs": [
+          "http://localhost:33423/callback",
+          "http://127.0.0.1:33423/callback",
+          "http://localhost:33418/callback",
+          "http://127.0.0.1:33418/callback",
+        ],
+        "ClientName": "mcp-savvy-human",
+        "EnableTokenRevocation": true,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+        "GenerateSecret": false,
+        "IdTokenValidity": 60,
+        "PreventUserExistenceErrors": "ENABLED",
+        "RefreshTokenValidity": 43200,
+        "SupportedIdentityProviders": [
+          "COGNITO",
+        ],
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "minutes",
+        },
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolClient",
+    },
+    "Gateway43CB3636": {
+      "Properties": {
+        "AuthorizerConfiguration": {
+          "CustomJWTAuthorizer": {
+            "AllowedClients": [
+              {
+                "Ref": "AuthUserPoolHumanClientB3C2C458",
+              },
+            ],
+            "DiscoveryUrl": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://cognito-idp.us-east-1.amazonaws.com/",
+                  {
+                    "Ref": "AuthUserPool8115E87F",
+                  },
+                  "/.well-known/openid-configuration",
+                ],
+              ],
+            },
+          },
+        },
+        "AuthorizerType": "CUSTOM_JWT",
+        "Description": "snapshot fixture",
+        "Name": "mcp-savvy-test-gw",
+        "ProtocolConfiguration": {
+          "Mcp": {
+            "Instructions": "Default gateway to connect to external MCP tools",
+            "SearchType": "SEMANTIC",
+            "SupportedVersions": [
+              "2025-03-26",
+            ],
+          },
+        },
+        "ProtocolType": "MCP",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "GatewayServiceRole162DEA77",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::BedrockAgentCore::Gateway",
+    },
+    "GatewayServiceRole162DEA77": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock-agentcore:us-east-1:111111111111:gateway/mcp-savvy-test-gw*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock-agentcore.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "Service role for Bedrock AgentCore Gateway mcp-savvy-test-gw",
+      },
+      "Type": "AWS::IAM::Role",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`AgentCoreGateway — snapshot > matches the synthesized template (external OIDC IdP with azp claim) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "Gateway43CB3636": {
+      "Properties": {
+        "AuthorizerConfiguration": {
+          "CustomJWTAuthorizer": {
+            "AllowedAudience": [
+              "11111111-1111-1111-1111-111111111111",
+            ],
+            "CustomClaims": [
+              {
+                "AuthorizingClaimMatchValue": {
+                  "ClaimMatchOperator": "EQUALS",
+                  "ClaimMatchValue": {
+                    "MatchValueString": "11111111-1111-1111-1111-111111111111",
+                  },
+                },
+                "InboundTokenClaimName": "azp",
+                "InboundTokenClaimValueType": "STRING",
+              },
+            ],
+            "DiscoveryUrl": "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0/.well-known/openid-configuration",
+          },
+        },
+        "AuthorizerType": "CUSTOM_JWT",
+        "Name": "mcp-savvy-test-gw-entra",
+        "ProtocolConfiguration": {
+          "Mcp": {
+            "Instructions": "Default gateway to connect to external MCP tools",
+            "SearchType": "SEMANTIC",
+            "SupportedVersions": [
+              "2025-03-26",
+            ],
+          },
+        },
+        "ProtocolType": "MCP",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "GatewayServiceRole162DEA77",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::BedrockAgentCore::Gateway",
+    },
+    "GatewayServiceRole162DEA77": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock-agentcore:us-east-1:111111111111:gateway/mcp-savvy-test-gw-entra*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock-agentcore.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "Service role for Bedrock AgentCore Gateway mcp-savvy-test-gw-entra",
+      },
+      "Type": "AWS::IAM::Role",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;

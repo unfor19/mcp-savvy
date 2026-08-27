@@ -1,0 +1,106 @@
+/** JSON Schemas for the architecture metadata, emitted to disk so editors + fon can validate the YAML. */
+
+/** Draft-07 schema for a per-example example.yaml file. */
+export const EXAMPLE_META_SCHEMA = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: 'https://mcp-savvy.dev/schemas/example-meta.json',
+    title: 'mcp-savvy example metadata',
+    description:
+        'Per-example facts that ARCHITECTURE.md is generated from. Lives at examples/<name>/example.yaml. Holds only what cannot be derived from code; prose stays in the example README.',
+    type: 'object',
+    additionalProperties: false,
+    required: [
+        'slug',
+        'title',
+        'matrixCell',
+        'backend',
+        'fronting',
+        'status',
+        'tagline',
+        'constructs',
+        'stacks',
+        'identityProviders',
+    ],
+    properties: {
+        slug: { type: 'string', pattern: '^[a-z0-9-]+$', description: 'Directory name under examples/.' },
+        title: { type: 'string', description: 'Human-readable example name.' },
+        matrixCell: { type: 'string', enum: ['A', 'A2', 'B', 'C', 'E', 'F', 'G'], description: 'Cell in the architecture matrix. G = Lambda MCP backend.' },
+        backend: { type: 'string', enum: ['runtime', 'gateway', 'lambda'], description: "Backend surface: AgentCore Runtime, AgentCore Gateway, or a plain Lambda hosting MCP Streamable HTTP." },
+        fronting: { type: 'string', enum: ['direct', 'rest-api'], description: 'Direct or behind a REST API front door.' },
+        status: {
+            type: 'string',
+            enum: ['validated', 'deployable', 'scaffold', 'planned'],
+            description: "validated = live end-to-end; deployable = synth/deploy clean, smoke pending; scaffold = in progress; planned = not built.",
+        },
+        statusNote: { type: 'string', description: 'Optional one-line qualifier shown next to the status.' },
+        tagline: { type: 'string', description: 'One-sentence summary.' },
+        useCase: { type: 'string', description: 'Optional short paragraph: the real-world scenario.' },
+        hostTools: {
+            type: 'array',
+            description: 'MCP tools the host sees from this example.',
+            items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['name', 'summary'],
+                properties: { name: { type: 'string' }, summary: { type: 'string' } },
+            },
+        },
+        constructs: { type: 'array', minItems: 1, items: { type: 'string' }, description: '@mcp-savvy/cdk constructs consumed.' },
+        stacks: {
+            type: 'array',
+            minItems: 1,
+            description: 'CDK stack IDs (Cognito IdP variant).',
+            items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['id', 'summary'],
+                properties: { id: { type: 'string' }, summary: { type: 'string' } },
+            },
+        },
+        identityProviders: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string', enum: ['cognito', 'imported-cognito', 'entra'] },
+            description: 'IdP variants this example ships make-targets for.',
+        },
+        makePrefix: { type: 'string', description: 'Makefile target prefix (e.g. example-minimal).' },
+        toolMode: { type: 'string', enum: ['passthrough', 'search-local', 'search-gateway'], description: 'Default tool-mode pairing.' },
+        relatedExamples: { type: 'array', items: { type: 'string' }, description: 'Sibling example slugs to compare against.' },
+    },
+};
+
+/** Draft-07 schema for the cross-cutting overview.yaml file. */
+export const OVERVIEW_SCHEMA = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    $id: 'https://mcp-savvy.dev/schemas/architecture-overview.json',
+    title: 'mcp-savvy architecture overview',
+    description: 'Cross-cutting content for ARCHITECTURE.md that is not tied to a single example.',
+    type: 'object',
+    additionalProperties: false,
+    required: ['purpose', 'matrixAxes', 'dataFlow', 'identityProviders'],
+    properties: {
+        purpose: { type: 'array', minItems: 1, items: { type: 'string' }, description: 'Paragraphs explaining what mcp-savvy is for.' },
+        matrixAxes: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['backend', 'fronting'],
+            properties: {
+                backend: { type: 'string', description: 'Explanation of the runtime-vs-gateway axis.' },
+                fronting: { type: 'string', description: 'Explanation of the direct-vs-fronted axis.' },
+            },
+        },
+        dataFlow: { type: 'string', description: 'ASCII data-flow diagram of the bridge.' },
+        identityProviders: {
+            type: 'array',
+            minItems: 1,
+            description: 'Cross-cutting IdP table rows.',
+            items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['name', 'issuer'],
+                properties: { name: { type: 'string' }, issuer: { type: 'string' }, notes: { type: 'string' } },
+            },
+        },
+    },
+};
+

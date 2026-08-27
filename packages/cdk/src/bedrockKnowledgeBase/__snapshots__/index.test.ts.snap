@@ -1,0 +1,1059 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BedrockKnowledgeBase — snapshot > matches the synthesized template with defaults 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "KBDataSource99775A8F": {
+      "DeletionPolicy": "Retain",
+      "DependsOn": [
+        "KBKnowledgeBase07CB2024",
+      ],
+      "Properties": {
+        "DataDeletionPolicy": "RETAIN",
+        "DataSourceConfiguration": {
+          "S3Configuration": {
+            "BucketArn": {
+              "Fn::GetAtt": [
+                "KBSourceBucket02DA16DA",
+                "Arn",
+              ],
+            },
+          },
+          "Type": "S3",
+        },
+        "KnowledgeBaseId": {
+          "Fn::GetAtt": [
+            "KBKnowledgeBase07CB2024",
+            "KnowledgeBaseId",
+          ],
+        },
+        "Name": "mcp-savvy-kb-data-source",
+        "VectorIngestionConfiguration": {
+          "ChunkingConfiguration": {
+            "ChunkingStrategy": "FIXED_SIZE",
+            "FixedSizeChunkingConfiguration": {
+              "MaxTokens": 512,
+              "OverlapPercentage": 20,
+            },
+          },
+        },
+      },
+      "Type": "AWS::Bedrock::DataSource",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "KBKnowledgeBase07CB2024": {
+      "DeletionPolicy": "Retain",
+      "DependsOn": [
+        "KBServiceRoleDefaultPolicy6BF8EC74",
+        "KBVectorIndex446C8430",
+      ],
+      "Properties": {
+        "Description": "mcp-savvy Bedrock Knowledge Base over S3 Vectors",
+        "KnowledgeBaseConfiguration": {
+          "Type": "VECTOR",
+          "VectorKnowledgeBaseConfiguration": {
+            "EmbeddingModelArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+                ],
+              ],
+            },
+            "EmbeddingModelConfiguration": {
+              "BedrockEmbeddingModelConfiguration": {
+                "Dimensions": 1024,
+                "EmbeddingDataType": "FLOAT32",
+              },
+            },
+          },
+        },
+        "Name": "mcp-savvy-kb",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "KBServiceRole49FC8A93",
+            "Arn",
+          ],
+        },
+        "StorageConfiguration": {
+          "S3VectorsConfiguration": {
+            "IndexArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":s3vectors:us-east-1:111111111111:bucket/mcp-savvy-kb-vectors-111111111111-us-east-1/index/mcp-savvy-kb-index",
+                ],
+              ],
+            },
+            "VectorBucketArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":s3vectors:us-east-1:111111111111:bucket/mcp-savvy-kb-vectors-111111111111-us-east-1",
+                ],
+              ],
+            },
+          },
+          "Type": "S3_VECTORS",
+        },
+      },
+      "Type": "AWS::Bedrock::KnowledgeBase",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "KBServiceRole49FC8A93": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "applies_to": [
+                "Resource::*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "reason": "bedrock:Rerank doesn't support resource-level permissions per the AWS Service Authorization Reference (Bedrock). Wildcard is the documented pattern. See https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html",
+            },
+            {
+              "applies_to": [
+                "Resource::<KBSourceBucket02DA16DA.Arn>/*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "is_reason_encoded": true,
+              "reason": "S0Igc2VydmljZSByb2xlIG5lZWRzIHJlYWQgb24gZXZlcnkgb2JqZWN0IGluIHRoZSBzb3VyY2UgYnVja2V0IOKAlCB0aGF0IGlzIHRoZSB3aG9sZSBwb2ludCBvZiBhIGRhdGEgc291cmNlLiBTY29wZWQgdG8gdGhlIGJ1Y2tldC1hcm4gcHJlZml4Lg==",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock:us-east-1:111111111111:knowledge-base/*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "mcp-savvy BedrockKnowledgeBase service role",
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "KBServiceRoleDefaultPolicy6BF8EC74": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "applies_to": [
+                "Resource::*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "reason": "bedrock:Rerank doesn't support resource-level permissions per the AWS Service Authorization Reference (Bedrock). Wildcard is the documented pattern. See https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html",
+            },
+            {
+              "applies_to": [
+                "Resource::<KBSourceBucket02DA16DA.Arn>/*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "is_reason_encoded": true,
+              "reason": "S0Igc2VydmljZSByb2xlIG5lZWRzIHJlYWQgb24gZXZlcnkgb2JqZWN0IGluIHRoZSBzb3VyY2UgYnVja2V0IOKAlCB0aGF0IGlzIHRoZSB3aG9sZSBwb2ludCBvZiBhIGRhdGEgc291cmNlLiBTY29wZWQgdG8gdGhlIGJ1Y2tldC1hcm4gcHJlZml4Lg==",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "bedrock:InvokeModel",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0",
+                  ],
+                ],
+              },
+              "Sid": "InvokeEmbeddingModel",
+            },
+            {
+              "Action": "bedrock:InvokeModel",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock:us-east-1::foundation-model/cohere.rerank-v3-5:0",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock:us-east-1::foundation-model/amazon.rerank-v1:0",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "InvokeRerankerModel",
+            },
+            {
+              "Action": "bedrock:Rerank",
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "RerankAction",
+            },
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "KBSourceBucket02DA16DA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "KBSourceBucket02DA16DA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "ReadSourceBucket",
+            },
+            {
+              "Action": [
+                "s3vectors:PutVectors",
+                "s3vectors:GetVectors",
+                "s3vectors:DeleteVectors",
+                "s3vectors:QueryVectors",
+                "s3vectors:GetIndex",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":s3vectors:us-east-1:111111111111:bucket/mcp-savvy-kb-vectors-111111111111-us-east-1/index/mcp-savvy-kb-index",
+                  ],
+                ],
+              },
+              "Sid": "S3VectorsReadAndWrite",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "KBServiceRoleDefaultPolicy6BF8EC74",
+        "Roles": [
+          {
+            "Ref": "KBServiceRole49FC8A93",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "KBSourceBucket02DA16DA": {
+      "DeletionPolicy": "Retain",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-S1",
+              "reason": "Source bucket access is operator-driven (sync + KB ingest). Audit trail belongs in CloudTrail S3 data-events, not per-bucket access logs. Pass \`accessLogsBucket\` to opt into S3 server-access logs explicitly.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256",
+              },
+            },
+          ],
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7,
+              },
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 30,
+              },
+              "Status": "Enabled",
+            },
+          ],
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true,
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled",
+        },
+      },
+      "Type": "AWS::S3::Bucket",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "KBSourceBucketPolicy59127B90": {
+      "Properties": {
+        "Bucket": {
+          "Ref": "KBSourceBucket02DA16DA",
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "KBSourceBucket02DA16DA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "KBSourceBucket02DA16DA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::S3::BucketPolicy",
+    },
+    "KBVectorBucket4B5A5BE9": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "EncryptionConfiguration": {
+          "SseType": "AES256",
+        },
+        "VectorBucketName": "mcp-savvy-kb-vectors-111111111111-us-east-1",
+      },
+      "Type": "AWS::S3Vectors::VectorBucket",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "KBVectorIndex446C8430": {
+      "DeletionPolicy": "Retain",
+      "DependsOn": [
+        "KBVectorBucket4B5A5BE9",
+      ],
+      "Properties": {
+        "DataType": "float32",
+        "Dimension": 1024,
+        "DistanceMetric": "cosine",
+        "IndexName": "mcp-savvy-kb-index",
+        "MetadataConfiguration": {
+          "NonFilterableMetadataKeys": [
+            "AMAZON_BEDROCK_TEXT",
+            "AMAZON_BEDROCK_METADATA",
+          ],
+        },
+        "VectorBucketName": "mcp-savvy-kb-vectors-111111111111-us-east-1",
+      },
+      "Type": "AWS::S3Vectors::Index",
+      "UpdateReplacePolicy": "Retain",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`BedrockKnowledgeBase — snapshot > matches the synthesized template with overrides 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+      "DependsOn": [
+        "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      ],
+      "Properties": {
+        "Code": {
+          "S3Bucket": "cdk-hnb659fds-assets-111111111111-us-east-1",
+          "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip",
+        },
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              "Lambda function for auto-deleting objects in ",
+              {
+                "Ref": "KBSourceBucket02DA16DA",
+              },
+              " S3 bucket.",
+            ],
+          ],
+        },
+        "Handler": "index.handler",
+        "MemorySize": 128,
+        "Role": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs24.x",
+        "Timeout": 900,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:\${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "KBDataSource99775A8F": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "KBKnowledgeBase07CB2024",
+      ],
+      "Properties": {
+        "DataDeletionPolicy": "DELETE",
+        "DataSourceConfiguration": {
+          "S3Configuration": {
+            "BucketArn": {
+              "Fn::GetAtt": [
+                "KBSourceBucket02DA16DA",
+                "Arn",
+              ],
+            },
+          },
+          "Type": "S3",
+        },
+        "KnowledgeBaseId": {
+          "Fn::GetAtt": [
+            "KBKnowledgeBase07CB2024",
+            "KnowledgeBaseId",
+          ],
+        },
+        "Name": "acme-kb-data-source",
+        "VectorIngestionConfiguration": {
+          "ChunkingConfiguration": {
+            "ChunkingStrategy": "HIERARCHICAL",
+            "HierarchicalChunkingConfiguration": {
+              "LevelConfigurations": [
+                {
+                  "MaxTokens": 600,
+                },
+                {
+                  "MaxTokens": 300,
+                },
+              ],
+              "OverlapTokens": 30,
+            },
+          },
+        },
+      },
+      "Type": "AWS::Bedrock::DataSource",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "KBKnowledgeBase07CB2024": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "KBServiceRoleDefaultPolicy6BF8EC74",
+        "KBVectorIndex446C8430",
+      ],
+      "Properties": {
+        "Description": "mcp-savvy Bedrock Knowledge Base over S3 Vectors",
+        "KnowledgeBaseConfiguration": {
+          "Type": "VECTOR",
+          "VectorKnowledgeBaseConfiguration": {
+            "EmbeddingModelArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":bedrock:us-east-1::foundation-model/cohere.embed-english-v3",
+                ],
+              ],
+            },
+            "EmbeddingModelConfiguration": {
+              "BedrockEmbeddingModelConfiguration": {
+                "Dimensions": 1024,
+                "EmbeddingDataType": "FLOAT32",
+              },
+            },
+          },
+        },
+        "Name": "acme-kb",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "KBServiceRole49FC8A93",
+            "Arn",
+          ],
+        },
+        "StorageConfiguration": {
+          "S3VectorsConfiguration": {
+            "IndexArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":s3vectors:us-east-1:111111111111:bucket/acme-kb-vectors-111111111111-us-east-1/index/acme-kb-index",
+                ],
+              ],
+            },
+            "VectorBucketArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition",
+                  },
+                  ":s3vectors:us-east-1:111111111111:bucket/acme-kb-vectors-111111111111-us-east-1",
+                ],
+              ],
+            },
+          },
+          "Type": "S3_VECTORS",
+        },
+      },
+      "Type": "AWS::Bedrock::KnowledgeBase",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "KBServiceRole49FC8A93": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "applies_to": [
+                "Resource::*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "reason": "bedrock:Rerank doesn't support resource-level permissions per the AWS Service Authorization Reference (Bedrock). Wildcard is the documented pattern. See https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html",
+            },
+            {
+              "applies_to": [
+                "Resource::<KBSourceBucket02DA16DA.Arn>/*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "is_reason_encoded": true,
+              "reason": "S0Igc2VydmljZSByb2xlIG5lZWRzIHJlYWQgb24gZXZlcnkgb2JqZWN0IGluIHRoZSBzb3VyY2UgYnVja2V0IOKAlCB0aGF0IGlzIHRoZSB3aG9sZSBwb2ludCBvZiBhIGRhdGEgc291cmNlLiBTY29wZWQgdG8gdGhlIGJ1Y2tldC1hcm4gcHJlZml4Lg==",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock:us-east-1:111111111111:knowledge-base/*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "mcp-savvy BedrockKnowledgeBase service role",
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "KBServiceRoleDefaultPolicy6BF8EC74": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "applies_to": [
+                "Resource::*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "reason": "bedrock:Rerank doesn't support resource-level permissions per the AWS Service Authorization Reference (Bedrock). Wildcard is the documented pattern. See https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonbedrock.html",
+            },
+            {
+              "applies_to": [
+                "Resource::<KBSourceBucket02DA16DA.Arn>/*",
+              ],
+              "id": "AwsSolutions-IAM5",
+              "is_reason_encoded": true,
+              "reason": "S0Igc2VydmljZSByb2xlIG5lZWRzIHJlYWQgb24gZXZlcnkgb2JqZWN0IGluIHRoZSBzb3VyY2UgYnVja2V0IOKAlCB0aGF0IGlzIHRoZSB3aG9sZSBwb2ludCBvZiBhIGRhdGEgc291cmNlLiBTY29wZWQgdG8gdGhlIGJ1Y2tldC1hcm4gcHJlZml4Lg==",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "bedrock:InvokeModel",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":bedrock:us-east-1::foundation-model/cohere.embed-english-v3",
+                  ],
+                ],
+              },
+              "Sid": "InvokeEmbeddingModel",
+            },
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:ResourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "KBSourceBucket02DA16DA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "KBSourceBucket02DA16DA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "ReadSourceBucket",
+            },
+            {
+              "Action": [
+                "s3vectors:PutVectors",
+                "s3vectors:GetVectors",
+                "s3vectors:DeleteVectors",
+                "s3vectors:QueryVectors",
+                "s3vectors:GetIndex",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":s3vectors:us-east-1:111111111111:bucket/acme-kb-vectors-111111111111-us-east-1/index/acme-kb-index",
+                  ],
+                ],
+              },
+              "Sid": "S3VectorsReadAndWrite",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "KBServiceRoleDefaultPolicy6BF8EC74",
+        "Roles": [
+          {
+            "Ref": "KBServiceRole49FC8A93",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "KBSourceBucket02DA16DA": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-S1",
+              "reason": "Source bucket access is operator-driven (sync + KB ingest). Audit trail belongs in CloudTrail S3 data-events, not per-bucket access logs. Pass \`accessLogsBucket\` to opt into S3 server-access logs explicitly.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256",
+              },
+            },
+          ],
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "AbortIncompleteMultipartUpload": {
+                "DaysAfterInitiation": 7,
+              },
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 30,
+              },
+              "Status": "Enabled",
+            },
+          ],
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true,
+        },
+        "Tags": [
+          {
+            "Key": "aws-cdk:auto-delete-objects",
+            "Value": "true",
+          },
+        ],
+        "VersioningConfiguration": {
+          "Status": "Enabled",
+        },
+      },
+      "Type": "AWS::S3::Bucket",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "KBSourceBucketAutoDeleteObjectsCustomResourceF23DB7EB": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "KBSourceBucketPolicy59127B90",
+      ],
+      "Properties": {
+        "BucketName": {
+          "Ref": "KBSourceBucket02DA16DA",
+        },
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "Custom::S3AutoDeleteObjects",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "KBSourceBucketPolicy59127B90": {
+      "Properties": {
+        "Bucket": {
+          "Ref": "KBSourceBucket02DA16DA",
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "KBSourceBucket02DA16DA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "KBSourceBucket02DA16DA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "s3:PutBucketPolicy",
+                "s3:GetBucket*",
+                "s3:List*",
+                "s3:DeleteObject*",
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "KBSourceBucket02DA16DA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "KBSourceBucket02DA16DA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::S3::BucketPolicy",
+    },
+    "KBVectorBucket4B5A5BE9": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "EncryptionConfiguration": {
+          "SseType": "AES256",
+        },
+        "VectorBucketName": "acme-kb-vectors-111111111111-us-east-1",
+      },
+      "Type": "AWS::S3Vectors::VectorBucket",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "KBVectorIndex446C8430": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "KBVectorBucket4B5A5BE9",
+      ],
+      "Properties": {
+        "DataType": "float32",
+        "Dimension": 1024,
+        "DistanceMetric": "cosine",
+        "IndexName": "acme-kb-index",
+        "MetadataConfiguration": {
+          "NonFilterableMetadataKeys": [
+            "AMAZON_BEDROCK_TEXT",
+            "AMAZON_BEDROCK_METADATA",
+          ],
+        },
+        "VectorBucketName": "acme-kb-vectors-111111111111-us-east-1",
+      },
+      "Type": "AWS::S3Vectors::Index",
+      "UpdateReplacePolicy": "Delete",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;

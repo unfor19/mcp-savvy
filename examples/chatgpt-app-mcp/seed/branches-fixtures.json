@@ -1,0 +1,956 @@
+{
+    "table": "branches",
+    "_comment": "Fake Savvy branches across Israel for the chatgpt-app-mcp demo. Hours format per weekday: 'HH:MM-HH:MM' or 'closed'. Three close-time profiles cycle by index (idx%3) so 'open now' filtering shows differentiation. Lat/lon are approximate; the data is not real.",
+    "items": [
+        {
+            "branch_id": "savvy-tel-aviv-rothschild",
+            "name": "Savvy Tel Aviv – Rothschild",
+            "address": "56 Rothschild Blvd, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0628,
+            "lon": 34.7720,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-dizengoff",
+            "name": "Savvy Tel Aviv – Dizengoff",
+            "address": "100 Dizengoff St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0780,
+            "lon": 34.7740,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-ibn-gvirol",
+            "name": "Savvy Tel Aviv – Ibn Gvirol",
+            "address": "30 Ibn Gvirol St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0810,
+            "lon": 34.7855,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-kaplan",
+            "name": "Savvy Tel Aviv – Kaplan",
+            "address": "12 Kaplan St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0768,
+            "lon": 34.7825,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-allenby",
+            "name": "Savvy Tel Aviv – Allenby",
+            "address": "88 Allenby St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0670,
+            "lon": 34.7700,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-ben-yehuda",
+            "name": "Savvy Tel Aviv – Ben Yehuda",
+            "address": "145 Ben Yehuda St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0860,
+            "lon": 34.7720,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tel-aviv-yarkon",
+            "name": "Savvy Tel Aviv – Yarkon",
+            "address": "220 HaYarkon St, Tel Aviv",
+            "city": "Tel Aviv",
+            "region": "Israel",
+            "lat": 32.0830,
+            "lon": 34.7680,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-petah-tikva-jabotinsky",
+            "name": "Savvy Petah Tikva – Jabotinsky",
+            "address": "10 Jabotinsky St, Petah Tikva",
+            "city": "Petah Tikva",
+            "region": "Israel",
+            "lat": 32.0840,
+            "lon": 34.8878,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-petah-tikva-rothschild",
+            "name": "Savvy Petah Tikva – Rothschild",
+            "address": "25 Rothschild St, Petah Tikva",
+            "city": "Petah Tikva",
+            "region": "Israel",
+            "lat": 32.0890,
+            "lon": 34.8920,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-petah-tikva-herzl",
+            "name": "Savvy Petah Tikva – Herzl",
+            "address": "47 Herzl St, Petah Tikva",
+            "city": "Petah Tikva",
+            "region": "Israel",
+            "lat": 32.0810,
+            "lon": 34.8830,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-petah-tikva-stampfer",
+            "name": "Savvy Petah Tikva – Stampfer",
+            "address": "8 Stampfer St, Petah Tikva",
+            "city": "Petah Tikva",
+            "region": "Israel",
+            "lat": 32.0860,
+            "lon": 34.8895,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-petah-tikva-haim-ozer",
+            "name": "Savvy Petah Tikva – Haim Ozer",
+            "address": "33 Haim Ozer St, Petah Tikva",
+            "city": "Petah Tikva",
+            "region": "Israel",
+            "lat": 32.0800,
+            "lon": 34.8950,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-jaffa",
+            "name": "Savvy Jerusalem – Jaffa Road",
+            "address": "38 Jaffa Rd, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7837,
+            "lon": 35.2200,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-king-george",
+            "name": "Savvy Jerusalem – King George",
+            "address": "19 King George St, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7790,
+            "lon": 35.2200,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-emek-refaim",
+            "name": "Savvy Jerusalem – Emek Refaim",
+            "address": "22 Emek Refaim St, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7610,
+            "lon": 35.2210,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-malha",
+            "name": "Savvy Jerusalem – Malha",
+            "address": "Malha Mall, Agudat Sport Beitar 1, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7505,
+            "lon": 35.1860,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-talpiot",
+            "name": "Savvy Jerusalem – Talpiot",
+            "address": "5 Pierre Koenig St, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7470,
+            "lon": 35.2230,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-rehavia",
+            "name": "Savvy Jerusalem – Rehavia",
+            "address": "7 Ben Maimon Ave, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.7720,
+            "lon": 35.2160,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-har-hotzvim",
+            "name": "Savvy Jerusalem – Har Hotzvim",
+            "address": "1 Hartom St, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.8000,
+            "lon": 35.2050,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-jerusalem-ramot",
+            "name": "Savvy Jerusalem – Ramot",
+            "address": "15 Sderot Golda Meir, Jerusalem",
+            "city": "Jerusalem",
+            "region": "Israel",
+            "lat": 31.8160,
+            "lon": 35.2030,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-hadar",
+            "name": "Savvy Haifa – Hadar",
+            "address": "22 Herzl St, Hadar HaCarmel, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.8127,
+            "lon": 34.9931,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-carmel-center",
+            "name": "Savvy Haifa – Carmel Center",
+            "address": "130 Sderot HaNassi, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.8050,
+            "lon": 34.9885,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-german-colony",
+            "name": "Savvy Haifa – German Colony",
+            "address": "18 Ben Gurion Blvd, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.8170,
+            "lon": 34.9920,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-grand-canyon",
+            "name": "Savvy Haifa – Grand Canyon",
+            "address": "Grand Canyon Mall, Simha Golan St, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.8030,
+            "lon": 35.0210,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-bat-galim",
+            "name": "Savvy Haifa – Bat Galim",
+            "address": "3 Sderot Bat Galim, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.8290,
+            "lon": 34.9700,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-haifa-neve-shaanan",
+            "name": "Savvy Haifa – Neve Shaanan",
+            "address": "56 Sderot Trumpeldor, Haifa",
+            "city": "Haifa",
+            "region": "Israel",
+            "lat": 32.7900,
+            "lon": 35.0090,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-beer-sheva-rager",
+            "name": "Savvy Be'er Sheva – Rager",
+            "address": "100 Sderot Rager, Be'er Sheva",
+            "city": "Be'er Sheva",
+            "region": "Israel",
+            "lat": 31.2580,
+            "lon": 34.7920,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-beer-sheva-old-city",
+            "name": "Savvy Be'er Sheva – Old City",
+            "address": "8 Smilansky St, Be'er Sheva",
+            "city": "Be'er Sheva",
+            "region": "Israel",
+            "lat": 31.2440,
+            "lon": 34.7895,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-beer-sheva-grand-mall",
+            "name": "Savvy Be'er Sheva – Grand Mall",
+            "address": "Grand Mall, 4 HaShaket St, Be'er Sheva",
+            "city": "Be'er Sheva",
+            "region": "Israel",
+            "lat": 31.2460,
+            "lon": 34.8000,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-beer-sheva-university",
+            "name": "Savvy Be'er Sheva – University",
+            "address": "1 Ben Gurion University Blvd, Be'er Sheva",
+            "city": "Be'er Sheva",
+            "region": "Israel",
+            "lat": 31.2620,
+            "lon": 34.8035,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-netanya-herzl",
+            "name": "Savvy Netanya – Herzl",
+            "address": "32 Herzl St, Netanya",
+            "city": "Netanya",
+            "region": "Israel",
+            "lat": 32.3215,
+            "lon": 34.8570,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-netanya-promenade",
+            "name": "Savvy Netanya – Promenade",
+            "address": "5 Sderot Nitza, Netanya",
+            "city": "Netanya",
+            "region": "Israel",
+            "lat": 32.3270,
+            "lon": 34.8420,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-netanya-poleg",
+            "name": "Savvy Netanya – Poleg",
+            "address": "7 Mefi St, Poleg, Netanya",
+            "city": "Netanya",
+            "region": "Israel",
+            "lat": 32.2960,
+            "lon": 34.8540,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-netanya-kiryat-nordau",
+            "name": "Savvy Netanya – Kiryat Nordau",
+            "address": "14 Sderot HaTzmaut, Netanya",
+            "city": "Netanya",
+            "region": "Israel",
+            "lat": 32.3340,
+            "lon": 34.8625,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-rishon-rothschild",
+            "name": "Savvy Rishon LeZion – Rothschild",
+            "address": "50 Rothschild St, Rishon LeZion",
+            "city": "Rishon LeZion",
+            "region": "Israel",
+            "lat": 31.9740,
+            "lon": 34.7950,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-rishon-azrieli",
+            "name": "Savvy Rishon LeZion – Azrieli",
+            "address": "Azrieli Mall Rishon, 6 Hatkuma St, Rishon LeZion",
+            "city": "Rishon LeZion",
+            "region": "Israel",
+            "lat": 31.9700,
+            "lon": 34.7850,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-rishon-old-city",
+            "name": "Savvy Rishon LeZion – Old City",
+            "address": "12 Jabotinsky St, Rishon LeZion",
+            "city": "Rishon LeZion",
+            "region": "Israel",
+            "lat": 31.9760,
+            "lon": 34.7980,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-rishon-kiryat-rishon",
+            "name": "Savvy Rishon LeZion – Kiryat Rishon",
+            "address": "88 Sderot Yaakov, Rishon LeZion",
+            "city": "Rishon LeZion",
+            "region": "Israel",
+            "lat": 31.9665,
+            "lon": 34.7895,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-ramat-gan-bialik",
+            "name": "Savvy Ramat Gan – Bialik",
+            "address": "25 Bialik St, Ramat Gan",
+            "city": "Ramat Gan",
+            "region": "Israel",
+            "lat": 32.0800,
+            "lon": 34.8170,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-ramat-gan-diamond-exchange",
+            "name": "Savvy Ramat Gan – Diamond Exchange",
+            "address": "1 Jabotinsky St, Ramat Gan",
+            "city": "Ramat Gan",
+            "region": "Israel",
+            "lat": 32.0840,
+            "lon": 34.8150,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-ramat-gan-bursa",
+            "name": "Savvy Ramat Gan – Bursa",
+            "address": "10 Tuval St, Ramat Gan",
+            "city": "Ramat Gan",
+            "region": "Israel",
+            "lat": 32.0850,
+            "lon": 34.8090,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-ramat-gan-marom",
+            "name": "Savvy Ramat Gan – Marom",
+            "address": "75 HaShalom Rd, Ramat Gan",
+            "city": "Ramat Gan",
+            "region": "Israel",
+            "lat": 32.0710,
+            "lon": 34.8230,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-herzliya-pituach",
+            "name": "Savvy Herzliya – Pituach",
+            "address": "5 Maskit St, Herzliya",
+            "city": "Herzliya",
+            "region": "Israel",
+            "lat": 32.1620,
+            "lon": 34.8050,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-herzliya-arena",
+            "name": "Savvy Herzliya – Arena",
+            "address": "Arena Mall, 6 HaMaapilim St, Herzliya",
+            "city": "Herzliya",
+            "region": "Israel",
+            "lat": 32.1645,
+            "lon": 34.7990,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-herzliya-mercaz",
+            "name": "Savvy Herzliya – Mercaz",
+            "address": "8 Sokolov St, Herzliya",
+            "city": "Herzliya",
+            "region": "Israel",
+            "lat": 32.1670,
+            "lon": 34.8470,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-eilat-promenade",
+            "name": "Savvy Eilat – Promenade",
+            "address": "1 Sderot HaTmarim, Eilat",
+            "city": "Eilat",
+            "region": "Israel",
+            "lat": 29.5570,
+            "lon": 34.9520,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-eilat-airport",
+            "name": "Savvy Eilat – Ramon Airport",
+            "address": "Ramon Airport Terminal, Eilat",
+            "city": "Eilat",
+            "region": "Israel",
+            "lat": 29.7240,
+            "lon": 35.0140,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tiberias-promenade",
+            "name": "Savvy Tiberias – Promenade",
+            "address": "12 Sderot HaBanim, Tiberias",
+            "city": "Tiberias",
+            "region": "Israel",
+            "lat": 32.7950,
+            "lon": 35.5320,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-16:45",
+                "mon": "09:00-16:45",
+                "tue": "09:00-16:45",
+                "wed": "09:00-16:45",
+                "thu": "09:00-16:45",
+                "fri": "09:00-13:45",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-tiberias-yigal-allon",
+            "name": "Savvy Tiberias – Yigal Allon",
+            "address": "5 Yigal Allon St, Tiberias",
+            "city": "Tiberias",
+            "region": "Israel",
+            "lat": 32.7990,
+            "lon": 35.5295,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:00",
+                "mon": "09:00-17:00",
+                "tue": "09:00-17:00",
+                "wed": "09:00-17:00",
+                "thu": "09:00-17:00",
+                "fri": "09:00-14:00",
+                "sat": "closed"
+            }
+        },
+        {
+            "branch_id": "savvy-ashdod-city",
+            "name": "Savvy Ashdod – City Center",
+            "address": "18 Sderot HaNassi, Ashdod",
+            "city": "Ashdod",
+            "region": "Israel",
+            "lat": 31.7940,
+            "lon": 34.6446,
+            "timezone": "Asia/Jerusalem",
+            "hours": {
+                "sun": "09:00-17:15",
+                "mon": "09:00-17:15",
+                "tue": "09:00-17:15",
+                "wed": "09:00-17:15",
+                "thu": "09:00-17:15",
+                "fri": "09:00-14:15",
+                "sat": "closed"
+            }
+        }
+    ]
+}

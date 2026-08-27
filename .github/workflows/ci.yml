@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v9
+        with:
+          version: "0.11.33"
+      - run: pnpm install --frozen-lockfile
+      - run: make ci
+      - run: pnpm audit --audit-level low

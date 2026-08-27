@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Credit balance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    __CSS__
+  </style>
+</head>
+
+<body>
+  <section id="card" class="card" role="status" aria-live="polite" data-state="loading">
+    <div id="header" class="header" data-state="loading">
+      <span class="lock" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="7" width="10" height="7" rx="1.5" />
+          <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+        </svg>
+      </span>
+      <span id="title">Credit balance</span>
+    </div>
+    <div id="amount" class="amount"><span class="skeleton" aria-label="loading"></span></div>
+    <div id="meta" class="meta"></div>
+    <div id="footer" class="footer" data-state="loading">
+      <span id="footerText">Verifying secure session…</span>
+      <span class="badge"><span class="dot" aria-hidden="true"></span><span id="badgeText">Encrypted</span></span>
+    </div>
+  </section>
+  <script>__JS__</script>
+</body>
+
+</html>

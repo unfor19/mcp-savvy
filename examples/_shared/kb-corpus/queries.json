@@ -1,0 +1,167 @@
+{
+    "description": "Verification queries for the kb-mcp + gateway-kb-mcp examples. Each query targets specific content from the corpus that an LLM is unlikely to produce without retrieval. Smoke tests assert every expected_substring appears in the agent's answer (case-insensitive substring match).",
+    "queries": [
+        {
+            "question": "According to Meir's research notes, what percentage of suggested packages do commercial vs open-source models hallucinate?",
+            "expected_substrings": [
+                "5.2",
+                "21.7"
+            ],
+            "source_url": "https://meirg.co.il/2025/07/18/ai-code-generation-smarter-and-cost-efficient-with-context-engineering/"
+        },
+        {
+            "question": "What does Meir call the phenomenon where LLMs forget information in the middle of long contexts, and what shape does the attention bias have?",
+            "expected_substrings": [
+                "Context Rot",
+                "lost-in-the-middle"
+            ],
+            "source_url": "https://meirg.co.il/2025/07/18/ai-code-generation-smarter-and-cost-efficient-with-context-engineering/"
+        },
+        {
+            "question": "What single canonical file does Meir recommend symlinking CLAUDE.md, GEMINI.md, and AGENTS.md to?",
+            "expected_substrings": [
+                "DETAILS.md"
+            ],
+            "source_url": "https://meirg.co.il/2025/07/18/ai-code-generation-smarter-and-cost-efficient-with-context-engineering/"
+        },
+        {
+            "question": "What percentage cost reduction does Meir cite from an IBM study on container vs VM server maintenance?",
+            "expected_substrings": [
+                "75%"
+            ],
+            "source_url": "https://meirg.co.il/2025/07/16/beyond-the-hype-rediscovering-why-containers-won/"
+        },
+        {
+            "question": "What Kubernetes adoption percentage does Meir cite, per Edge Delta?",
+            "expected_substrings": [
+                "96%"
+            ],
+            "source_url": "https://meirg.co.il/2025/07/16/beyond-the-hype-rediscovering-why-containers-won/"
+        },
+        {
+            "question": "Which Bedrock API does Claude Desktop call in BYO-Bedrock mode, and what entrypoint header value identifies the traffic?",
+            "expected_substrings": [
+                "InvokeModelWithResponseStream",
+                "claude-desktop-3p"
+            ],
+            "source_url": "https://meirg.co.il/2026/05/06/what-claude-desktop-sends-to-amazon-bedrock/"
+        },
+        {
+            "question": "About how large is the Claude Agent SDK system prompt that Claude Desktop sends to Bedrock, per Meir's CloudWatch capture?",
+            "expected_substrings": [
+                "25K"
+            ],
+            "source_url": "https://meirg.co.il/2026/05/06/what-claude-desktop-sends-to-amazon-bedrock/"
+        },
+        {
+            "question": "When does Meir recommend Amazon S3 Files over EFS for AWS workloads?",
+            "expected_substrings": [
+                "source of truth",
+                "S3"
+            ],
+            "source_url": "https://meirg.co.il/2026/05/12/amazon-s3-files-vs-efs-when-to-use-which/"
+        },
+        {
+            "question": "For a WordPress runtime on AWS, does Meir recommend Amazon S3 Files or Amazon EFS?",
+            "expected_substrings": [
+                "EFS"
+            ],
+            "source_url": "https://meirg.co.il/2026/05/12/amazon-s3-files-vs-efs-when-to-use-which/"
+        },
+        {
+            "question": "How does goofys describe itself per Meir's post comparing AWS shared filesystem options?",
+            "expected_substrings": [
+                "filey system",
+                "performance first"
+            ],
+            "source_url": "https://meirg.co.il/2026/05/12/amazon-s3-files-vs-efs-when-to-use-which/"
+        },
+        {
+            "question": "In Meir's troubleshooting post about Prometheus and NewRelic, what was the root cause of why removing the Security Group rule didn't stop the metrics flow?",
+            "expected_substrings": [
+                "keep-alive",
+                "active connection"
+            ],
+            "source_url": "https://meirg.co.il/2021/01/25/troubleshooting-the-right-way/"
+        },
+        {
+            "question": "What three axes does Meir use to prioritize candidate troubleshooting solutions?",
+            "expected_substrings": [
+                "Reliability",
+                "Time to first results",
+                "explain"
+            ],
+            "source_url": "https://meirg.co.il/2021/01/25/troubleshooting-the-right-way/"
+        },
+        {
+            "question": "In Meir's Docker tips, what UID and GID does he recommend matching between the container's appuser and the host's user, and why?",
+            "expected_substrings": [
+                "1000",
+                "appuser"
+            ],
+            "source_url": "https://meirg.co.il/2021/02/11/docker-tips-and-best-practices/"
+        },
+        {
+            "question": "According to Meir's Docker post, why is copying requirements.txt before the rest of the source code a Dockerfile best practice?",
+            "expected_substrings": [
+                "cache"
+            ],
+            "source_url": "https://meirg.co.il/2021/02/11/docker-tips-and-best-practices/"
+        },
+        {
+            "question": "What does Meir say is the SendGrid DKIM selector subdomain prefix, compared to the Google selector?",
+            "expected_substrings": [
+                "s1._domainkey",
+                "google._domainkey"
+            ],
+            "source_url": "https://meirg.co.il/2021/11/26/improving-email-deliverability-with-dns-records/"
+        },
+        {
+            "question": "What free DMARC analytics service does Meir recommend, and which DMARC policy value does he start with for monitoring?",
+            "expected_substrings": [
+                "ValiMail",
+                "p=none"
+            ],
+            "source_url": "https://meirg.co.il/2021/11/26/improving-email-deliverability-with-dns-records/"
+        },
+        {
+            "question": "Per Meir's AWS Security Groups post, are Security Groups stateful or stateless, and what's the corresponding answer for NACLs?",
+            "expected_substrings": [
+                "stateful",
+                "stateless"
+            ],
+            "source_url": "https://meirg.co.il/2021/06/02/aws-security-groups-once-and-for-all/"
+        },
+        {
+            "question": "Per Meir, can AWS Security Groups explicitly Deny traffic? Which AWS service should you use for that instead?",
+            "expected_substrings": [
+                "NACL"
+            ],
+            "source_url": "https://meirg.co.il/2021/06/02/aws-security-groups-once-and-for-all/"
+        },
+        {
+            "question": "What encryption command does Meir recommend for safely recovering a CI/CD secret in GitHub Actions logs?",
+            "expected_substrings": [
+                "openssl",
+                "aes-256-cbc",
+                "pbkdf2"
+            ],
+            "source_url": "https://meirg.co.il/2022/07/01/how-to-recover-secrets-from-github-actions/"
+        },
+        {
+            "question": "In Meir's IAM-policies post, which open-source tool generates IAM policies from real AWS calls, and how many iterations of terraform apply did he need for a single aws_s3_bucket resource?",
+            "expected_substrings": [
+                "iamlive",
+                "eight"
+            ],
+            "source_url": "https://meirg.co.il/2021/04/23/determining-aws-iam-policies-according-to-terraform-and-aws-cli/"
+        },
+        {
+            "question": "What is the actual IAM action name behind the AWS CLI command 'aws s3 ls', per Meir's iamlive walkthrough?",
+            "expected_substrings": [
+                "s3:ListAllMyBuckets"
+            ],
+            "source_url": "https://meirg.co.il/2021/04/23/determining-aws-iam-policies-according-to-terraform-and-aws-cli/"
+        }
+    ]
+}

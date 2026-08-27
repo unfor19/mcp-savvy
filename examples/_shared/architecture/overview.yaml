@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=./overview.schema.json
+# Cross-cutting content for the generated ARCHITECTURE.md.
+# Per-example facts live in examples/<name>/example.yaml.
+# Regenerate the doc with `make architecture`.
+
+purpose:
+  - >-
+    mcp-savvy is the expert MCP deployer, so you only deal with your app.
+    It ships protected MCP servers on AWS without copy-pasting auth, infra,
+    and a stdio bridge into every new repo — distilled from several
+    production deployments that all rebuilt the same plumbing: OIDC PKCE,
+    OS-keychain token storage, a hardened local callback server, a
+    stdio ↔ Streamable-HTTP bridge, and CDK infra for Cognito + AgentCore.
+  - >-
+    There are two consumers. End users run the published CLI as a stdio
+    bridge (same UX as mcp-remote, with auth baked in) — one `npx` line in
+    their MCP client config, no AWS account required. MCP authors import
+    the CDK constructs to stand up the backend: Cognito + AgentCore Runtime
+    or Gateway, secure by default, cdk-nag clean.
+  - >-
+    The examples below are the proof. Each deploys end-to-end to a sandbox
+    AWS account with a single `make` target and uses the same mcp-savvy
+    client (no per-example bridges). Identity-provider coverage is listed
+    explicitly for each example.
+
+matrixAxes:
+  backend: >-
+    Runtime hosts your code (a Strands agent or any MCP server in a
+    container); Gateway exposes other people's APIs (Lambda, OpenAPI,
+    Smithy) as MCP tools; Lambda MCP hosts the MCP server in a plain
+    Lambda when AgentCore is overkill or when VPC isolation is the
+    point. The first two map to AgentCore's two MCP product surfaces;
+    the third covers the bring-your-own-Lambda story.
+  fronting: >-
+    Direct calls AgentCore straight (cheapest, smallest blast radius);
+    the REST API front door adds WAF, throttling, IP allowlists, and a
+    custom domain. The fronting choice is independent of the backend.
+    Only REST API is shipped — HTTP API's native JWT authorizer is
+    Cognito-only and would silently break Entra/Okta/Auth0.
+
+dataFlow: |
+  MCP client (Kiro / Claude Code / Codex / any MCP host)
+              │ stdio (JSON-RPC)
+              ▼
+  ┌───────────────────────────────────────────────────┐
+  │  npx -y mcp-savvy                                  │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐      │
+  │  │ Stdio    │◄►│ Auth     │◄►│ Token store  │      │
+  │  │ bridge   │  │ provider │  │ (keychain or │      │
+  │  │ +        │  │ (OIDC)   │  │  enc-file)   │      │
+  │  │ search-  │  └────┬─────┘  └──────────────┘      │
+  │  │ first    │       │ PKCE                         │
+  │  │ + 3LO    │       ▼                              │
+  │  │ orchestr.│  ┌─────────────────┐                 │
+  │  │          │  │ Local callback  │ ← branded       │
+  │  │          │  │ servers         │   success page  │
+  │  │          │  │ (33423 + 33424) │                 │
+  │  └────┬─────┘  └─────────────────┘                 │
+  └───────┼───────────────────────────────────────────┘
+          │ Streamable HTTP, Bearer JWT
+          ▼
+     AgentCore Runtime  /  AgentCore Gateway  /  any protected MCP
+         (your @mcp-savvy/cdk-deployed backend)
+
+identityProviders:
+  - name: AWS Cognito
+    issuer: https://cognito-idp.<region>.amazonaws.com/<pool-id>
+    notes: Default in every example. Zero IdP config for new users.
+  - name: Microsoft Entra ID
+    issuer: https://login.microsoftonline.com/<tenant>/v2.0
+    notes: >-
+      Public client (PKCE, no secret). Needs accessTokenAcceptedVersion=2
+      and an `azp`-claim authorizer rule — handled by entraExternalOidc().
+      Full walkthrough in examples/identity-providers/entra.md.
+  - name: Okta
+    issuer: https://<your-domain>.okta.com/oauth2/default
+    notes: >-
+      Public Native app (PKCE). Custom authorization server (the bundled
+      `default` server) — `aud` is `api://default` and the client id rides
+      in the `cid` claim, not `client_id`/`azp`. Handled by oktaExternalOidc().
+  - name: Auth0
+    issuer: https://<your-domain>.auth0.com/
+    notes: >-
+      Public Native client (PKCE). You MUST pass an API Identifier as the
+      audience or Auth0 returns an opaque token, not a JWT; client id rides
+      in `azp`. Handled by auth0ExternalOidc().
+  - name: Keycloak
+    issuer: https://<host>/realms/<realm>
+    notes: >-
+      Public client with PKCE. Client id rides in `azp`; `aud` is not set to
+      the client by default, so audience validation is skipped unless an
+      audience mapper is added. Handled by keycloakExternalOidc().

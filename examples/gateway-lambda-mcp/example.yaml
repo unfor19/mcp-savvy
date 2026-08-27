@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: gateway-lambda-mcp
+title: Gateway + Lambda MCP
+matrixCell: B
+backend: gateway
+fronting: direct
+status: validated
+statusNote: live on Cognito + Entra (2026-05-27)
+tagline: >-
+  Expose existing Lambda functions as MCP tools through an AgentCore Gateway,
+  without touching the agent layer. Two trivial tools demonstrate the shape.
+useCase: >-
+  You already have Lambdas and want them reachable as auth-gated MCP tools.
+  The Gateway invokes the Lambdas over IAM; the end user authenticates against
+  Cognito to reach the Gateway. No OAuth dance for the tools themselves.
+hostTools:
+  - name: getCurrentTime
+    summary: Returns the current server time — a zero-arg Lambda tool.
+  - name: summarizeText
+    summary: Trims/echoes text — shows an argument-taking Lambda tool.
+constructs:
+  - CognitoAuth
+  - AgentCoreGateway
+stacks:
+  - id: McpSavvyGatewayDemoCognito
+    summary: Cognito user pool (or imported via the bring-your-own-pool path).
+  - id: McpSavvyGatewayDemoGateway
+    summary: AgentCore Gateway + the Lambda target hosting both tools.
+identityProviders:
+  - cognito
+  - imported-cognito
+  - entra
+makePrefix: example-gateway-lambda
+toolMode: passthrough
+relatedExamples:
+  - gateway-3lo-mcp

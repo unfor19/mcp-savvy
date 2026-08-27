@@ -1,0 +1,40 @@
+# Ignore all dotfiles by default; explicitly allow what should be tracked.
+.*
+!.gitignore
+!.gitattributes
+!.npmrc
+!.nvmrc
+!.editorconfig
+!.prettierrc
+!.prettierrc.*
+!.eslintrc
+!.eslintrc.*
+!.dockerignore
+!.env.example
+!.github/
+!.vscode/
+!.fon/
+
+# fon's own .gitignore inside .fon/ — auto-generated, do not commit
+.fon/.gitignore
+
+# Build / install artifacts
+node_modules/
+dist/
+dist-lambdas/
+coverage/
+*.log
+__pycache__/
+*.pyc
+
+# pnpm
+.pnpm-store/
+
+# CDK (for examples/* later)
+cdk.out/
+.cdk.staging/
+# cdk.context.json caches per-account context lookups (AZ lists, prefix-list
+# IDs, etc.). Committing it leaks the developer's account ID into the tree
+# and pins lookups to that account, breaking forks. Each user re-runs the
+# lookups on first synth (one-time AWS call per workspace).
+cdk.context.json

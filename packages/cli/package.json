@@ -1,0 +1,71 @@
+{
+    "name": "mcp-savvy",
+    "version": "0.1.3",
+    "description": "Stdio MCP bridge for protected MCP servers — drop-in for npx -y mcp-savvy.",
+    "license": "MIT",
+    "homepage": "https://github.com/unfor19/mcp-savvy#readme",
+    "bugs": {
+        "url": "https://github.com/unfor19/mcp-savvy/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/unfor19/mcp-savvy.git",
+        "directory": "packages/cli"
+    },
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "aws",
+        "agentcore",
+        "cognito",
+        "oauth",
+        "oidc",
+        "stdio",
+        "bridge"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "type": "module",
+    "engines": {
+        "node": ">=20"
+    },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "bin": {
+        "mcp-savvy": "dist/cli.cjs"
+    },
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup && chmod +x dist/cli.cjs",
+        "build:tsc": "tsc && chmod +x dist/cli.js",
+        "clean": "rm -rf dist",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.30.0"
+    },
+    "devDependencies": {
+        "@mcp-savvy/auth": "workspace:*",
+        "@mcp-savvy/bridge": "workspace:*",
+        "@mcp-savvy/core": "workspace:*",
+        "@mcp-savvy/server": "workspace:*",
+        "@mcp-savvy/storage": "workspace:*",
+        "proper-lockfile": "^4.1.2",
+        "tsup": "^8.5.1"
+    }
+}
