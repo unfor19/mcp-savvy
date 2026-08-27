@@ -1,0 +1,6 @@
+**
+!agent.py
+!pyproject.toml
+!system_prompt.md
+!tools
+!tools/**

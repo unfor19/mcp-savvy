@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: minimal-mcp
+title: Minimal MCP
+matrixCell: A
+backend: runtime
+fronting: direct
+status: validated
+statusNote: live on Cognito + Entra (2026-05-27)
+tagline: >-
+  The smallest possible protected MCP — Cognito + AgentCore Runtime running
+  a one-tool echo agent. Validates the client without any extra moving parts.
+useCase: >-
+  Start here. It's the reference shape every other example builds on: a JWT
+  user pool in front of an AgentCore Runtime, reached through the mcp-savvy
+  bridge.
+hostTools:
+  - name: echo
+    summary: Returns its input — proves the authenticated round-trip end to end.
+constructs:
+  - CognitoAuth
+  - AgentCoreRuntime
+stacks:
+  - id: McpSavvyDemoCognito
+    summary: Cognito user pool (MFA TOTP, managed login, branding).
+  - id: McpSavvyDemoRuntime
+    summary: AgentCore Runtime running the echo agent, gated by the pool's JWT.
+identityProviders:
+  - cognito
+  - entra
+makePrefix: example-minimal
+toolMode: passthrough
+relatedExamples:
+  - kb-mcp

@@ -1,0 +1,27 @@
+{
+    "name": "@mcp-savvy-examples/kb-mcp-infra",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "CDK app for the mcp-savvy kb-mcp example.",
+    "license": "MIT",
+    "scripts": {
+        "synth": "cdk synth --strict",
+        "diff": "cdk diff",
+        "deploy": "cdk deploy --all --require-approval=never",
+        "destroy": "cdk destroy --all --force",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@mcp-savvy/cdk": "workspace:*",
+        "aws-cdk-lib": "2.267.0",
+        "cdk-nag": "2.38.2",
+        "constructs": "10.8.1"
+    },
+    "devDependencies": {
+        "@types/node": "22.10.2",
+        "aws-cdk": "2.1139.0",
+        "tsx": "4.23.12",
+        "typescript": "5.7.2"
+    }
+}

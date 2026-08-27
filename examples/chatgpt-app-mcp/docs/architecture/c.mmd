@@ -1,0 +1,73 @@
+%%{init: {"theme": "default", "flowchart": {"htmlLabels": true, "curve": "basis"}}}%%
+%% Pattern C — CloudFront + internal ALB + execute-api VPCE + Private API Gateway + Lambda.
+%% Banking-grade: API Gateway has *no public DNS*; only the configured VPCE can reach it.
+%% This is the recommended shape for regulated workloads. NOT what is currently deployed.
+%% See: examples/chatgpt-app-mcp/DEPLOYMENT-PATTERNS.md (§ Pattern C).
+flowchart TB
+    classDef client    fill:#eef,stroke:#446,stroke-width:1px,color:#113;
+    classDef edge      fill:#ffe,stroke:#a82,stroke-width:1px,color:#420;
+    classDef apigw     fill:#fef,stroke:#849,stroke-width:1px,color:#208;
+    classDef compute   fill:#efe,stroke:#484,stroke-width:1px,color:#031;
+    classDef data      fill:#eff,stroke:#488,stroke-width:1px,color:#033;
+    classDef idp       fill:#fee,stroke:#844,stroke-width:1px,color:#400;
+    classDef net       fill:#f0f4ff,stroke:#446,stroke-width:1px,color:#113;
+    classDef vpc       fill:#f6f6f6,stroke:#888,stroke-width:1px,stroke-dasharray:4 3,color:#333;
+
+    Client[["ChatGPT &nbsp;/ MCP host<br/><i>Authorization: Bearer JWT</i>"]]:::client
+
+    subgraph EDGE["AWS &nbsp;edge (global)"]
+        CF["CloudFront distribution<br/>+ AWS WAF (global scope)<br/>origin custom header<br/><i>x-apigw-api-id: &lt;api-id&gt;</i>"]:::edge
+    end
+
+    subgraph VPC["VPC &nbsp;— private subnets across 2+ AZs"]
+        direction TB
+        ALB["Internal ALB (HTTPS, TLS 1.3)<br/>SG ingress: CloudFront prefix list only<br/>target group: TargetType = IP<br/>targets = execute-api VPCE ENI IPs"]:::net
+        VPCE_API[("Interface VPCE<br/>execute-api<br/>SG: ALB SG only")]:::net
+        VPCE_COG[("Interface VPCE<br/>cognito-idp")]:::net
+        VPCE_LOGS[("Interface VPCE<br/>logs")]:::net
+        VPCE_DDB[("Gateway VPCE<br/>dynamodb")]:::net
+        LAMBDA["MCP Lambda<br/>Node 22 ARM64<br/>private-isolated subnets<br/>egress only via VPCEs"]:::compute
+        ENI_RES["AwsCustomResource<br/><i>ec2:DescribeNetworkInterfaces</i><br/>resolves VPCE ENIs → ALB IP targets"]:::net
+    end
+
+    subgraph PRIVAPI["Private API Gateway &nbsp;(REST, endpointTypes: PRIVATE)"]
+        direction TB
+        APIGW["Private REST API<br/>Resource policy:<br/><code>aws:sourceVpce == &lt;our VPCE&gt;</code>"]:::apigw
+        AUTHZ{{"Cognito User Pool Authorizer<br/><i>required scope: balance.read</i>"}}:::apigw
+        VAL{{"Request Validator<br/><i>JSON-RPC 2.0 envelope model</i>"}}:::apigw
+        WELLKNOWN["Public well-known routes<br/><i>no authorizer (RFC 9728 / 8414)</i>"]:::apigw
+    end
+
+    subgraph DATA["DynamoDB &nbsp;— AWS-managed encryption + PITR + deletion protection"]
+        direction LR
+        DDB_CUST[("customer_data<br/>GetItem only")]:::data
+        DDB_REFS[("secure_view_refs<br/>TTL 60s")]:::data
+        DDB_AUDIT[("audit_log<br/>append-only")]:::data
+    end
+
+    subgraph IDP["Cognito user pool"]
+        COG["MFA TOTP required<br/>PKCE public client<br/>Hosted UI"]:::idp
+    end
+
+    Client -->|HTTPS| CF
+    CF -->|"VPC origin<br/>+ x-apigw-api-id header"| ALB
+    ALB --> VPCE_API
+    VPCE_API --> APIGW
+    APIGW --> AUTHZ
+    AUTHZ -->|valid JWT + scope| VAL
+    AUTHZ -.->|JWKS| VPCE_COG -.-> COG
+    VAL -->|proxy integration| LAMBDA
+    APIGW -.->|no-auth path| WELLKNOWN
+    WELLKNOWN --> LAMBDA
+
+    ENI_RES -. "resolves at deploy time" .-> ALB
+
+    LAMBDA -- "GetItem / Put+UpdateItem / PutItem" --> VPCE_DDB
+    VPCE_DDB --> DDB_CUST
+    VPCE_DDB --> DDB_REFS
+    VPCE_DDB --> DDB_AUDIT
+    LAMBDA -- "logs" --> VPCE_LOGS
+
+    Client -.->|OAuth 2.1 + PKCE| COG
+
+    class VPC vpc

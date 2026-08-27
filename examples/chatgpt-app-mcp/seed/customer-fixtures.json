@@ -1,0 +1,50 @@
+{
+    "table": "customer_data",
+    "items": [
+        {
+            "user_sub": "fixture-test-user-1",
+            "customer_id_hash": "fx-7a3b9c1e0d2f5a8b6c4e9d1f0a2b3c4d",
+            "currency": "USD",
+            "balance_cents": 1234055,
+            "available_credit_cents": 800000,
+            "card_last_four_masked": "**** **** **** 4321",
+            "last_updated": "2026-06-01T00:00:00Z"
+        },
+        {
+            "user_sub": "fixture-test-user-2",
+            "customer_id_hash": "fx-2c8d4e1f9a0b3c5d7e2f1a4b6c8d9e0f",
+            "currency": "USD",
+            "balance_cents": 0,
+            "available_credit_cents": 1500000,
+            "card_last_four_masked": "**** **** **** 9001",
+            "last_updated": "2026-06-01T00:00:00Z"
+        },
+        {
+            "user_sub": "fixture-test-user-3",
+            "customer_id_hash": "fx-9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b",
+            "currency": "EUR",
+            "balance_cents": 5000000,
+            "available_credit_cents": 2000000,
+            "card_last_four_masked": "**** **** **** 7777",
+            "last_updated": "2026-06-01T00:00:00Z"
+        },
+        {
+            "user_sub": "fixture-test-user-4",
+            "customer_id_hash": "fx-4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e",
+            "currency": "ILS",
+            "balance_cents": 7250075,
+            "available_credit_cents": 3000000,
+            "card_last_four_masked": "**** **** **** 1042",
+            "last_updated": "2026-06-01T00:00:00Z"
+        },
+        {
+            "user_sub": "fixture-test-user-5",
+            "customer_id_hash": "fx-1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d",
+            "currency": "USD",
+            "balance_cents": 9876543,
+            "available_credit_cents": 5000000,
+            "card_last_four_masked": "**** **** **** 5555",
+            "last_updated": "2026-06-01T00:00:00Z"
+        }
+    ]
+}

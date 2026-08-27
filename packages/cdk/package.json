@@ -1,0 +1,42 @@
+{
+    "name": "@mcp-savvy/cdk",
+    "version": "0.0.0",
+    "private": true,
+    "description": "CDK constructs for shipping protected MCP servers on AWS — Cognito auth, AgentCore Runtime, JWT-aware fronting.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "dist-lambdas"
+    ],
+    "scripts": {
+        "build": "tsc && node scripts/build-lambdas.mjs",
+        "clean": "rm -rf dist dist-lambdas",
+        "typecheck": "tsc --noEmit && tsc --noEmit -p src/lambdas/tsconfig.json"
+    },
+    "peerDependencies": {
+        "aws-cdk-lib": "2.267.0",
+        "constructs": "10.8.1"
+    },
+    "dependencies": {
+        "@aws-sdk/client-bedrock-agentcore-control": "^3.1120.0",
+        "cdk-nag": "2.38.2"
+    },
+    "devDependencies": {
+        "@aws-sdk/client-bedrock-agent": "^3.1120.0",
+        "@aws-sdk/client-bedrock-agentcore": "3.1120.0",
+        "@types/aws-lambda": "8.10.162",
+        "aws-cdk-lib": "2.267.0",
+        "constructs": "10.8.1",
+        "esbuild": "0.28.2",
+        "jose": "6.2.10"
+    }
+}

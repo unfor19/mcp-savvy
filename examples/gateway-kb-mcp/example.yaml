@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: gateway-kb-mcp
+title: Knowledge-Base MCP (no LLM)
+matrixCell: B
+backend: gateway
+fronting: direct
+status: validated
+statusNote: both Lambda tools live-validated (2026-05-31); interactive smoke pending
+tagline: >-
+  The same Bedrock Knowledge Base fronted by an AgentCore Gateway Lambda
+  target — no agent. The Lambda forwards two tools straight to the Bedrock
+  Agent Runtime; the host LLM drives RAG.
+useCase: >-
+  The no-LLM-in-the-loop variant of kb-mcp. Use kb_retrieve for raw context
+  the host reasons over, or kb_retrieve_and_generate for a server-side
+  grounded answer. Cheaper and simpler when you don't need an agent.
+hostTools:
+  - name: kb_retrieve
+    summary: Forwards to bedrock-agent-runtime Retrieve — ranked chunks + source URIs.
+  - name: kb_retrieve_and_generate
+    summary: Forwards to RetrieveAndGenerate — grounded answer + citations, server-side.
+constructs:
+  - CognitoAuth
+  - BedrockKnowledgeBase
+  - AgentCoreGateway
+stacks:
+  - id: McpSavvyGatewayKbDemoCognito
+    summary: Cognito user pool.
+  - id: McpSavvyGatewayKbDemoKb
+    summary: BedrockKnowledgeBase — shared across IdP variants.
+  - id: McpSavvyGatewayKbDemoGateway
+    summary: AgentCore Gateway + the CJS-bundled Lambda KB target.
+identityProviders:
+  - cognito
+  - entra
+makePrefix: example-gateway-kb
+toolMode: passthrough
+relatedExamples:
+  - kb-mcp

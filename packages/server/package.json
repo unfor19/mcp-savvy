@@ -1,0 +1,27 @@
+{
+    "name": "@mcp-savvy/server",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Local OAuth callback server for mcp-savvy.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@mcp-savvy/core": "workspace:*"
+    }
+}

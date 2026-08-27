@@ -1,0 +1,53 @@
+%%{init: {"theme": "default", "flowchart": {"htmlLabels": true, "curve": "basis"}}}%%
+%% Pattern A — CloudFront + internal ALB + Lambda (in-process JWT validation).
+%% Auth lives in Lambda (`auth.mjs`); no API Gateway.
+%% The README's "Architecture" section currently describes this shape, but the
+%% deployed code is Pattern D. See DEPLOYMENT-PATTERNS.md.
+flowchart TB
+    classDef client    fill:#eef,stroke:#446,stroke-width:1px,color:#113;
+    classDef edge      fill:#ffe,stroke:#a82,stroke-width:1px,color:#420;
+    classDef compute   fill:#efe,stroke:#484,stroke-width:1px,color:#031;
+    classDef data      fill:#eff,stroke:#488,stroke-width:1px,color:#033;
+    classDef idp       fill:#fee,stroke:#844,stroke-width:1px,color:#400;
+    classDef net       fill:#f0f4ff,stroke:#446,stroke-width:1px,color:#113;
+    classDef vpc       fill:#f6f6f6,stroke:#888,stroke-width:1px,stroke-dasharray:4 3,color:#333;
+
+    Client[["ChatGPT &nbsp;/ MCP host<br/><i>Authorization: Bearer JWT</i>"]]:::client
+
+    subgraph EDGE["AWS &nbsp;edge (global)"]
+        CF["CloudFront distribution<br/>+ AWS WAF (global scope)<br/>managed rules + rate limit"]:::edge
+    end
+
+    subgraph VPC["VPC &nbsp;— private subnets"]
+        direction TB
+        ALB["Internal ALB (HTTPS)<br/>SG ingress: CloudFront prefix list only<br/>target group: TargetType = LAMBDA"]:::net
+        LAMBDA["MCP Lambda (in VPC)<br/><b>auth.mjs</b> — in-process JWT verify<br/><i>iss / aud / exp / scope</i>"]:::compute
+        VPCE_COG[("Interface VPCE<br/>cognito-idp (JWKS)")]:::net
+        VPCE_LOGS[("Interface VPCE<br/>logs")]:::net
+        VPCE_DDB[("Gateway VPCE<br/>dynamodb")]:::net
+    end
+
+    subgraph DATA["DynamoDB &nbsp;— AWS-managed encryption + PITR + deletion protection"]
+        direction LR
+        DDB_CUST[("customer_data")]:::data
+        DDB_REFS[("secure_view_refs")]:::data
+        DDB_AUDIT[("audit_log")]:::data
+    end
+
+    subgraph IDP["Cognito user pool"]
+        COG["MFA TOTP required<br/>PKCE public client<br/>Hosted UI"]:::idp
+    end
+
+    Client -->|HTTPS| CF
+    CF -->|"VPC origin"| ALB
+    ALB -->|"direct integration<br/>(no API Gateway)"| LAMBDA
+
+    LAMBDA -.->|JWKS fetch| VPCE_COG -.-> COG
+    LAMBDA --> VPCE_DDB --> DDB_CUST
+    VPCE_DDB --> DDB_REFS
+    VPCE_DDB --> DDB_AUDIT
+    LAMBDA --> VPCE_LOGS
+
+    Client -.->|OAuth 2.1 + PKCE| COG
+
+    class VPC vpc

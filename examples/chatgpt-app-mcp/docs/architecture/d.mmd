@@ -1,0 +1,60 @@
+%%{init: {"theme": "default", "flowchart": {"htmlLabels": true, "curve": "basis"}}}%%
+%% Pattern D — Public Regional API Gateway + Lambda (no CloudFront, no ALB).
+%% This is what `bin/app.ts` actually deploys today (4 stacks).
+%% See: examples/chatgpt-app-mcp/DEPLOYMENT-PATTERNS.md (§ Pattern D).
+flowchart TB
+    classDef client    fill:#eef,stroke:#446,stroke-width:1px,color:#113;
+    classDef edge      fill:#ffe,stroke:#a82,stroke-width:1px,color:#420;
+    classDef apigw     fill:#fef,stroke:#849,stroke-width:1px,color:#208;
+    classDef compute   fill:#efe,stroke:#484,stroke-width:1px,color:#031;
+    classDef data      fill:#eff,stroke:#488,stroke-width:1px,color:#033;
+    classDef idp       fill:#fee,stroke:#844,stroke-width:1px,color:#400;
+    classDef vpc       fill:#f6f6f6,stroke:#888,stroke-width:1px,stroke-dasharray:4 3,color:#333;
+
+    Client[["ChatGPT &nbsp;/ MCP host<br/><i>Authorization: Bearer JWT</i>"]]:::client
+
+    subgraph PUBLIC["AWS &nbsp;— public ingress (regional)"]
+        WAF["Regional WAF WebACL<br/>AWS managed common rules<br/>+ rate-limit (200 req / 5 min / IP)<br/>+ body cap 16 KiB"]:::edge
+        APIGW["Public API Gateway (REST, regional)<br/>custom domain only<br/><i>disableExecuteApiEndpoint: true</i>"]:::apigw
+        AUTHZ{{"Cognito User Pool Authorizer<br/><i>required scope: balance.read</i>"}}:::apigw
+        VAL{{"Request Validator<br/><i>JSON-RPC 2.0 envelope model</i>"}}:::apigw
+        WELLKNOWN["Public well-known routes<br/><code>/.well-known/oauth-protected-resource</code><br/><code>/oauth-authorization-server</code><br/><code>/openid-configuration</code><br/><i>no authorizer (RFC 9728 / 8414)</i>"]:::apigw
+    end
+
+    subgraph VPC["VPC &nbsp;— private-isolated subnets only"]
+        direction TB
+        LAMBDA["MCP Lambda<br/>Node 22 ARM64, 512 MB<br/>reservedConcurrency = 10<br/>egress only via VPCEs"]:::compute
+        VPCE_LOGS[("Interface VPCE<br/>logs")]:::compute
+        VPCE_DDB[("Gateway VPCE<br/>dynamodb")]:::compute
+    end
+
+    subgraph DATA["DynamoDB &nbsp;— AWS-managed encryption + PITR + deletion protection"]
+        direction LR
+        DDB_CUST[("customer_data<br/>PK user_sub<br/><i>GetItem only</i>")]:::data
+        DDB_REFS[("secure_view_refs<br/>PK ref_id, TTL 60s<br/><i>PutItem + UpdateItem</i>")]:::data
+        DDB_AUDIT[("audit_log<br/>PK event_id / SK created_at<br/><i>PutItem only — append-only</i>")]:::data
+    end
+
+    subgraph IDP["Cognito &nbsp;— McpSavvyChatGptAppCognito"]
+        COG["User Pool<br/>MFA TOTP required<br/>PKCE public client<br/>Hosted UI"]:::idp
+        RS["Resource server<br/><code>mcp-savvy.chatgpt-app</code><br/>scope <code>balance.read</code>"]:::idp
+    end
+
+    Client -->|HTTPS| WAF
+    WAF --> APIGW
+    APIGW --> AUTHZ
+    AUTHZ -->|valid JWT + scope| VAL
+    AUTHZ -.->|JWKS &nbsp;via cognito-idp service endpoint| COG
+    VAL -->|proxy integration| LAMBDA
+    APIGW -.->|no-auth path| WELLKNOWN
+    WELLKNOWN --> LAMBDA
+
+    LAMBDA -- "GetItem" --> VPCE_DDB --> DDB_CUST
+    LAMBDA -- "Put + UpdateItem" --> VPCE_DDB --> DDB_REFS
+    LAMBDA -- "PutItem (audit)" --> VPCE_DDB --> DDB_AUDIT
+    LAMBDA -- "logs" --> VPCE_LOGS
+
+    Client -.->|"OAuth 2.1 + PKCE<br/>authorization_code"| COG
+    COG --- RS
+
+    class VPC vpc

@@ -1,0 +1,948 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AgentCoreRuntime — snapshot > matches the synthesized template (Cognito IdP) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "AuthHumanClientBrandingBEC7635F": {
+      "Properties": {
+        "ClientId": {
+          "Ref": "AuthUserPoolHumanClientB3C2C458",
+        },
+        "UseCognitoProvidedValues": true,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::ManagedLoginBranding",
+    },
+    "AuthUserPool8115E87F": {
+      "DeletionPolicy": "Delete",
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-COG8",
+              "reason": "Cognito Plus tier is a paid feature. Production deployments should opt in by enabling advanced security at the Plus tier.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AccountRecoverySetting": {
+          "RecoveryMechanisms": [
+            {
+              "Name": "verified_email",
+              "Priority": 1,
+            },
+          ],
+        },
+        "AdminCreateUserConfig": {
+          "AllowAdminCreateUserOnly": true,
+        },
+        "AutoVerifiedAttributes": [
+          "email",
+        ],
+        "EmailVerificationMessage": "The verification code to your new account is {####}",
+        "EmailVerificationSubject": "Verify your new account",
+        "EnabledMfas": [
+          "SOFTWARE_TOKEN_MFA",
+        ],
+        "MfaConfiguration": "ON",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 12,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+            "TemporaryPasswordValidityDays": 7,
+          },
+        },
+        "Schema": [
+          {
+            "Mutable": false,
+            "Name": "email",
+            "Required": true,
+          },
+        ],
+        "SmsVerificationMessage": "The verification code to your new account is {####}",
+        "UserPoolName": "mcp-savvy",
+        "UsernameAttributes": [
+          "email",
+        ],
+        "VerificationMessageTemplate": {
+          "DefaultEmailOption": "CONFIRM_WITH_CODE",
+          "EmailMessage": "The verification code to your new account is {####}",
+          "EmailSubject": "Verify your new account",
+          "SmsMessage": "The verification code to your new account is {####}",
+        },
+      },
+      "Type": "AWS::Cognito::UserPool",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "AuthUserPoolDomain31C6792A": {
+      "Properties": {
+        "Domain": "mcp-savvy-test",
+        "ManagedLoginVersion": 2,
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolDomain",
+    },
+    "AuthUserPoolHumanClientB3C2C458": {
+      "Properties": {
+        "AccessTokenValidity": 60,
+        "AllowedOAuthFlows": [
+          "code",
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthScopes": [
+          "openid",
+          "email",
+          "profile",
+        ],
+        "CallbackURLs": [
+          "http://localhost:33423/callback",
+          "http://127.0.0.1:33423/callback",
+          "http://localhost:33418/callback",
+          "http://127.0.0.1:33418/callback",
+        ],
+        "ClientName": "mcp-savvy-human",
+        "EnableTokenRevocation": true,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_SRP_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+        "GenerateSecret": false,
+        "IdTokenValidity": 60,
+        "PreventUserExistenceErrors": "ENABLED",
+        "RefreshTokenValidity": 43200,
+        "SupportedIdentityProviders": [
+          "COGNITO",
+        ],
+        "TokenValidityUnits": {
+          "AccessToken": "minutes",
+          "IdToken": "minutes",
+          "RefreshToken": "minutes",
+        },
+        "UserPoolId": {
+          "Ref": "AuthUserPool8115E87F",
+        },
+      },
+      "Type": "AWS::Cognito::UserPoolClient",
+    },
+    "CdkXRayLogsDeliveryPolicyResourcePolicy2C9C91AC": {
+      "Properties": {
+        "PolicyDocument": {
+          "Fn::Join": [
+            "",
+            [
+              "{"Statement":[{"Action":"xray:PutTraceSegments","Condition":{"ForAllValues:ArnLike":{"logs:LogGeneratingResourceArns":["",
+              {
+                "Fn::GetAtt": [
+                  "Runtime99E3DDFA",
+                  "AgentRuntimeArn",
+                ],
+              },
+              ""]},"StringEquals":{"aws:SourceAccount":"111111111111"},"ArnLike":{"aws:SourceArn":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":logs:us-east-1:111111111111:delivery-source:*"}},"Effect":"Allow","Principal":{"Service":"delivery.logs.amazonaws.com"},"Resource":"*"}],"Version":"2012-10-17"}",
+            ],
+          ],
+        },
+        "PolicyName": "CognitoCaseCdkXRayLogsDeliveryPolicyF64BA55A",
+      },
+      "Type": "AWS::XRay::ResourcePolicy",
+    },
+    "Runtime99E3DDFA": {
+      "DependsOn": [
+        "RuntimeExecutionRoleDefaultPolicy2B020CFC",
+        "RuntimeExecutionRole304CF3D8",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AgentRuntimeArtifact": {
+          "ContainerConfiguration": {
+            "ContainerUri": {
+              "Fn::Sub": "111111111111.dkr.ecr.us-east-1.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-111111111111-us-east-1:76ceb3461e91e1ba1ae89837431a452c8265c7c117ac616e07faa9e22b621e17",
+            },
+          },
+        },
+        "AgentRuntimeName": "mcp_savvy_test",
+        "AuthorizerConfiguration": {
+          "CustomJWTAuthorizer": {
+            "AllowedClients": [
+              {
+                "Ref": "AuthUserPoolHumanClientB3C2C458",
+              },
+            ],
+            "DiscoveryUrl": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://cognito-idp.us-east-1.amazonaws.com/",
+                  {
+                    "Ref": "AuthUserPool8115E87F",
+                  },
+                  "/.well-known/openid-configuration",
+                ],
+              ],
+            },
+          },
+        },
+        "Description": "snapshot fixture",
+        "LifecycleConfiguration": {},
+        "NetworkConfiguration": {
+          "NetworkMode": "PUBLIC",
+        },
+        "ProtocolConfiguration": "MCP",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "RuntimeExecutionRole304CF3D8",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::BedrockAgentCore::Runtime",
+    },
+    "RuntimeExecutionRole304CF3D8": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock-agentcore:us-east-1:111111111111:runtime/mcp_savvy_test*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock-agentcore.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "Execution role for Bedrock Agent Core Runtime",
+        "MaxSessionDuration": 28800,
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "RuntimeExecutionRoleDefaultPolicy2B020CFC": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:DescribeLogStreams",
+                "logs:CreateLogGroup",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:/aws/bedrock-agentcore/runtimes/*",
+                  ],
+                ],
+              },
+              "Sid": "LogGroupAccess",
+            },
+            {
+              "Action": "logs:DescribeLogGroups",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:*",
+                  ],
+                ],
+              },
+              "Sid": "DescribeLogGroups",
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*",
+                  ],
+                ],
+              },
+              "Sid": "LogStreamAccess",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "XRayAccess",
+            },
+            {
+              "Action": "cloudwatch:PutMetricData",
+              "Condition": {
+                "StringEquals": {
+                  "cloudwatch:namespace": "bedrock-agentcore",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "CloudWatchMetrics",
+            },
+            {
+              "Action": [
+                "bedrock-agentcore:GetWorkloadAccessToken",
+                "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
+                "bedrock-agentcore:GetWorkloadAccessTokenForUserId",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock-agentcore:us-east-1:111111111111:workload-identity-directory/default",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock-agentcore:us-east-1:111111111111:workload-identity-directory/default/workload-identity/*",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "GetAgentAccessToken",
+            },
+            {
+              "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ecr:us-east-1:111111111111:repository/cdk-hnb659fds-container-assets-111111111111-us-east-1",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ecr:GetAuthorizationToken",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "RuntimeExecutionRoleDefaultPolicy2B020CFC",
+        "Roles": [
+          {
+            "Ref": "RuntimeExecutionRole304CF3D8",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "RuntimeTracesDeliveryAEFFC9E0": {
+      "DependsOn": [
+        "RuntimeTracesDeliveryDestA40F3D27",
+        "RuntimeTracesDeliverySourceCE43B306",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "DeliveryDestinationArn": {
+          "Fn::GetAtt": [
+            "RuntimeTracesDeliveryDestA40F3D27",
+            "Arn",
+          ],
+        },
+        "DeliverySourceName": {
+          "Ref": "RuntimeTracesDeliverySourceCE43B306",
+        },
+      },
+      "Type": "AWS::Logs::Delivery",
+    },
+    "RuntimeTracesDeliveryDestA40F3D27": {
+      "DependsOn": [
+        "CdkXRayLogsDeliveryPolicyResourcePolicy2C9C91AC",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "DeliveryDestinationType": "XRAY",
+        "Name": "CognitoCaseRuntimeTracesDeliveryDestBB25836A",
+      },
+      "Type": "AWS::Logs::DeliveryDestination",
+    },
+    "RuntimeTracesDeliverySourceCE43B306": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "LogType": "TRACES",
+        "Name": "CognitoCaseRuntimeTracesDeliverySource448E5108",
+        "ResourceArn": {
+          "Fn::GetAtt": [
+            "Runtime99E3DDFA",
+            "AgentRuntimeArn",
+          ],
+        },
+      },
+      "Type": "AWS::Logs::DeliverySource",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`AgentCoreRuntime — snapshot > matches the synthesized template (external OIDC IdP with azp claim) 1`] = `
+{
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "CdkXRayLogsDeliveryPolicyResourcePolicy2C9C91AC": {
+      "Properties": {
+        "PolicyDocument": {
+          "Fn::Join": [
+            "",
+            [
+              "{"Statement":[{"Action":"xray:PutTraceSegments","Condition":{"ForAllValues:ArnLike":{"logs:LogGeneratingResourceArns":["",
+              {
+                "Fn::GetAtt": [
+                  "Runtime99E3DDFA",
+                  "AgentRuntimeArn",
+                ],
+              },
+              ""]},"StringEquals":{"aws:SourceAccount":"111111111111"},"ArnLike":{"aws:SourceArn":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":logs:us-east-1:111111111111:delivery-source:*"}},"Effect":"Allow","Principal":{"Service":"delivery.logs.amazonaws.com"},"Resource":"*"}],"Version":"2012-10-17"}",
+            ],
+          ],
+        },
+        "PolicyName": "EntraCaseCdkXRayLogsDeliveryPolicy38652725",
+      },
+      "Type": "AWS::XRay::ResourcePolicy",
+    },
+    "Runtime99E3DDFA": {
+      "DependsOn": [
+        "RuntimeExecutionRoleDefaultPolicy2B020CFC",
+        "RuntimeExecutionRole304CF3D8",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AgentRuntimeArtifact": {
+          "ContainerConfiguration": {
+            "ContainerUri": {
+              "Fn::Sub": "111111111111.dkr.ecr.us-east-1.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-111111111111-us-east-1:76ceb3461e91e1ba1ae89837431a452c8265c7c117ac616e07faa9e22b621e17",
+            },
+          },
+        },
+        "AgentRuntimeName": "mcp_savvy_test_entra",
+        "AuthorizerConfiguration": {
+          "CustomJWTAuthorizer": {
+            "AllowedAudience": [
+              "11111111-1111-1111-1111-111111111111",
+            ],
+            "CustomClaims": [
+              {
+                "AuthorizingClaimMatchValue": {
+                  "ClaimMatchOperator": "EQUALS",
+                  "ClaimMatchValue": {
+                    "MatchValueString": "11111111-1111-1111-1111-111111111111",
+                  },
+                },
+                "InboundTokenClaimName": "azp",
+                "InboundTokenClaimValueType": "STRING",
+              },
+            ],
+            "DiscoveryUrl": "https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/v2.0/.well-known/openid-configuration",
+          },
+        },
+        "LifecycleConfiguration": {},
+        "NetworkConfiguration": {
+          "NetworkMode": "PUBLIC",
+        },
+        "ProtocolConfiguration": "MCP",
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "RuntimeExecutionRole304CF3D8",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::BedrockAgentCore::Runtime",
+    },
+    "RuntimeExecutionRole304CF3D8": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Condition": {
+                "ArnLike": {
+                  "aws:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition",
+                        },
+                        ":bedrock-agentcore:us-east-1:111111111111:runtime/mcp_savvy_test_entra*",
+                      ],
+                    ],
+                  },
+                },
+                "StringEquals": {
+                  "aws:SourceAccount": "111111111111",
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock-agentcore.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Description": "Execution role for Bedrock Agent Core Runtime",
+        "MaxSessionDuration": 28800,
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "RuntimeExecutionRoleDefaultPolicy2B020CFC": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:DescribeLogStreams",
+                "logs:CreateLogGroup",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:/aws/bedrock-agentcore/runtimes/*",
+                  ],
+                ],
+              },
+              "Sid": "LogGroupAccess",
+            },
+            {
+              "Action": "logs:DescribeLogGroups",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:*",
+                  ],
+                ],
+              },
+              "Sid": "DescribeLogGroups",
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:us-east-1:111111111111:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*",
+                  ],
+                ],
+              },
+              "Sid": "LogStreamAccess",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "XRayAccess",
+            },
+            {
+              "Action": "cloudwatch:PutMetricData",
+              "Condition": {
+                "StringEquals": {
+                  "cloudwatch:namespace": "bedrock-agentcore",
+                },
+              },
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "CloudWatchMetrics",
+            },
+            {
+              "Action": [
+                "bedrock-agentcore:GetWorkloadAccessToken",
+                "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
+                "bedrock-agentcore:GetWorkloadAccessTokenForUserId",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock-agentcore:us-east-1:111111111111:workload-identity-directory/default",
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":bedrock-agentcore:us-east-1:111111111111:workload-identity-directory/default/workload-identity/*",
+                    ],
+                  ],
+                },
+              ],
+              "Sid": "GetAgentAccessToken",
+            },
+            {
+              "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ecr:us-east-1:111111111111:repository/cdk-hnb659fds-container-assets-111111111111-us-east-1",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ecr:GetAuthorizationToken",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "RuntimeExecutionRoleDefaultPolicy2B020CFC",
+        "Roles": [
+          {
+            "Ref": "RuntimeExecutionRole304CF3D8",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "RuntimeTracesDeliveryAEFFC9E0": {
+      "DependsOn": [
+        "RuntimeTracesDeliveryDestA40F3D27",
+        "RuntimeTracesDeliverySourceCE43B306",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "DeliveryDestinationArn": {
+          "Fn::GetAtt": [
+            "RuntimeTracesDeliveryDestA40F3D27",
+            "Arn",
+          ],
+        },
+        "DeliverySourceName": {
+          "Ref": "RuntimeTracesDeliverySourceCE43B306",
+        },
+      },
+      "Type": "AWS::Logs::Delivery",
+    },
+    "RuntimeTracesDeliveryDestA40F3D27": {
+      "DependsOn": [
+        "CdkXRayLogsDeliveryPolicyResourcePolicy2C9C91AC",
+      ],
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "DeliveryDestinationType": "XRAY",
+        "Name": "EntraCaseRuntimeTracesDeliveryDest8EECB476",
+      },
+      "Type": "AWS::Logs::DeliveryDestination",
+    },
+    "RuntimeTracesDeliverySourceCE43B306": {
+      "Metadata": {
+        "cdk_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "AwsSolutions-IAM5",
+              "reason": "AgentCore Runtime auto-managed execution role. Wildcards are scoped to AgentCore-owned ARN ranges (logs:/aws/bedrock-agentcore/* and bedrock-agentcore:workload-identity-directory/default/*). See https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "LogType": "TRACES",
+        "Name": "EntraCaseRuntimeTracesDeliverySourceFBE37C57",
+        "ResourceArn": {
+          "Fn::GetAtt": [
+            "Runtime99E3DDFA",
+            "AgentRuntimeArn",
+          ],
+        },
+      },
+      "Type": "AWS::Logs::DeliverySource",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;

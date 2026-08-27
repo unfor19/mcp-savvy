@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: chatgpt-app-mcp
+title: ChatGPT App (banking-grade)
+matrixCell: G
+backend: lambda
+fronting: rest-api
+status: validated
+statusNote: live end-to-end (2026-06-11)
+tagline: >-
+  Banking-grade ChatGPT App. ChatGPT prompts the user's balance; the model
+  sees a safe summary; the actual number is delivered to a sandboxed widget
+  only, through a WAF-protected Regional REST API → VPC Lambda → DynamoDB.
+useCase: >-
+  Sensitive financial data over MCP without leaking the value to the model.
+  The connector returns "Your balance is available in the secure panel."; a
+  widget iframe POSTs a one-time secure_view_ref to a widget-only endpoint
+  and renders the real number locally. The Lambda is VPC-isolated; the
+  Regional REST API custom domain is the only public ingress.
+hostTools:
+  - name: get_credit_balance_status
+    summary: >-
+      Returns "available" / "unavailable" + currency. Never the amount or
+      account details. Surfaces a secure_view_ref in `_meta` for the widget.
+  - name: get_credit_balance_actual
+    summary: >-
+      Widget-only (`_meta.ui.visibility=['app']`). Redeems a single-use
+      secure_view_ref and returns the actual balance via `_meta`, not
+      `structuredContent`/`content`. Privacy assumes the host isolates app-only `_meta`.
+  - name: list_branches
+    summary: >-
+      Public, model-visible. Lists Savvy branches across Israel with today's
+      open/closed status (computed in branch-local time). Optional `city`
+      filter narrows the result; widget renders a card with a directions
+      click-through per row.
+  - name: find_nearest_branches
+    summary: >-
+      Public, model-visible. Reads the user's coarse location from
+      `_meta["openai/userLocation"]`, ranks open branches by Haversine
+      distance, and returns the top N with Google Maps directions URLs
+      (free, no API key — Maps does its own geolocation on click). Falls
+      back to a city-sorted list when location sharing is off.
+constructs:
+  - CognitoAuth
+stacks:
+  - id: McpSavvyChatGptAppCognito
+    summary: Cognito user pool — MFA TOTP required; public PKCE client; Hosted UI for OAuth.
+  - id: McpSavvyChatGptAppData
+    summary: 4 DynamoDB tables (customer_data, secure_view_refs, audit_log, branches) with AWS-managed encryption + PITR + deletion protection.
+  - id: McpSavvyChatGptAppNetwork
+    summary: Private isolated VPC + Logs interface endpoint + DynamoDB gateway endpoint; no NAT or internet gateway.
+  - id: McpSavvyChatGptAppApp
+    summary: VPC Lambda + Regional REST API + Cognito authorizer + request validator + regional WAF + custom domain.
+identityProviders:
+  - cognito
+makePrefix: example-chatgpt-app
+toolMode: passthrough
+relatedExamples:
+  - gateway-lambda-mcp
+  - minimal-mcp

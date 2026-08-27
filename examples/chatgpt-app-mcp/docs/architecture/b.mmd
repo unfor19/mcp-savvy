@@ -1,0 +1,63 @@
+%%{init: {"theme": "default", "flowchart": {"htmlLabels": true, "curve": "basis"}}}%%
+%% Pattern B — CloudFront + Public Regional API Gateway + Lambda.
+%% Edge layer for managed-auth shape; CloudFront secret header gates origin access.
+%% See: examples/chatgpt-app-mcp/DEPLOYMENT-PATTERNS.md (§ Pattern B).
+flowchart TB
+    classDef client    fill:#eef,stroke:#446,stroke-width:1px,color:#113;
+    classDef edge      fill:#ffe,stroke:#a82,stroke-width:1px,color:#420;
+    classDef apigw     fill:#fef,stroke:#849,stroke-width:1px,color:#208;
+    classDef compute   fill:#efe,stroke:#484,stroke-width:1px,color:#031;
+    classDef data      fill:#eff,stroke:#488,stroke-width:1px,color:#033;
+    classDef idp       fill:#fee,stroke:#844,stroke-width:1px,color:#400;
+    classDef secret    fill:#fff5e0,stroke:#b80,stroke-width:1px,color:#420;
+    classDef vpc       fill:#f6f6f6,stroke:#888,stroke-width:1px,stroke-dasharray:4 3,color:#333;
+
+    Client[["ChatGPT &nbsp;/ MCP host<br/><i>Authorization: Bearer JWT</i>"]]:::client
+
+    subgraph EDGE["AWS &nbsp;edge (global)"]
+        CF["CloudFront distribution<br/>+ AWS WAF (global scope)"]:::edge
+        SECRET["Secrets Manager<br/><i>x-cf-secret rotated periodically</i>"]:::secret
+    end
+
+    subgraph PUBAPI["Public API Gateway &nbsp;(REST, regional, custom domain)"]
+        direction TB
+        APIGW["Public REST API<br/>Resource policy:<br/><i>deny if x-cf-secret header missing</i><br/><code>disableExecuteApiEndpoint: true</code>"]:::apigw
+        AUTHZ{{"Cognito User Pool Authorizer<br/><i>required scope: balance.read</i>"}}:::apigw
+        VAL{{"Request Validator<br/><i>JSON-RPC 2.0 envelope model</i>"}}:::apigw
+    end
+
+    subgraph VPC["VPC &nbsp;— for DynamoDB GW endpoint"]
+        direction TB
+        LAMBDA["MCP Lambda<br/>Node 22 ARM64"]:::compute
+        VPCE_COG[("Interface VPCE<br/>cognito-idp")]:::compute
+        VPCE_LOGS[("Interface VPCE<br/>logs")]:::compute
+        VPCE_DDB[("Gateway VPCE<br/>dynamodb")]:::compute
+    end
+
+    subgraph DATA["DynamoDB &nbsp;— AWS-managed encryption + PITR + deletion protection"]
+        direction LR
+        DDB_CUST[("customer_data")]:::data
+        DDB_REFS[("secure_view_refs")]:::data
+        DDB_AUDIT[("audit_log")]:::data
+    end
+
+    subgraph IDP["Cognito user pool"]
+        COG["MFA TOTP required<br/>PKCE public client<br/>Hosted UI"]:::idp
+    end
+
+    Client -->|HTTPS| CF
+    CF -->|"HTTPS to custom domain<br/>+ x-cf-secret header"| APIGW
+    SECRET -. "rotated, injected as origin custom header" .-> CF
+    APIGW --> AUTHZ
+    AUTHZ -->|valid JWT + scope| VAL
+    AUTHZ -.->|JWKS| VPCE_COG -.-> COG
+    VAL -->|proxy integration| LAMBDA
+
+    LAMBDA --> VPCE_DDB --> DDB_CUST
+    VPCE_DDB --> DDB_REFS
+    VPCE_DDB --> DDB_AUDIT
+    LAMBDA --> VPCE_LOGS
+
+    Client -.->|OAuth 2.1 + PKCE| COG
+
+    class VPC vpc

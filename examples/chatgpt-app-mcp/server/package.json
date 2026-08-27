@@ -1,0 +1,12 @@
+{
+    "name": "@mcp-savvy-examples/chatgpt-app-mcp-server",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "description": "MCP server Lambda code for the chatgpt-app-mcp example. Bundled into the Lambda asset by the infra package's CDK app at synth time.",
+    "license": "MIT",
+    "main": "index.mjs",
+    "devDependencies": {
+        "@aws-sdk/client-dynamodb": "^3.1120.0"
+    }
+}

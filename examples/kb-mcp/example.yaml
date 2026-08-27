@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: kb-mcp
+title: Knowledge-Base MCP (agentic)
+matrixCell: A2
+backend: runtime
+fronting: direct
+status: validated
+statusNote: KB + retrieval live (20/20); interactive agent-grounding smoke pending
+tagline: >-
+  A Strands agent on AgentCore Runtime grounded on a Bedrock Knowledge Base.
+  Exposes one outward tool, ask(question); the agent owns retrieval and
+  refuses when the KB has nothing relevant.
+useCase: >-
+  The team-internal knowledge base over MCP. The agent always retrieves
+  first, answers solely from retrieved chunks, and cites source URLs — the
+  same grounding discipline as .vanguard / .genia.
+hostTools:
+  - name: ask
+    summary: Answers a question strictly from the KB, with citations, or says it can't.
+constructs:
+  - CognitoAuth
+  - BedrockKnowledgeBase
+  - AgentCoreRuntime
+stacks:
+  - id: McpSavvyKbDemoCognito
+    summary: Cognito user pool.
+  - id: McpSavvyKbDemoKb
+    summary: BedrockKnowledgeBase — S3 source bucket + S3 Vectors + KB + DataSource + IAM.
+  - id: McpSavvyKbDemoRuntime
+    summary: AgentCore Runtime running the Strands agent in agents/agentic/.
+identityProviders:
+  - cognito
+  - entra
+makePrefix: example-kb
+toolMode: passthrough
+relatedExamples:
+  - gateway-kb-mcp
