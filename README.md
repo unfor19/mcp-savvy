@@ -4,6 +4,21 @@
 
 > The expert MCP deployer, so you only deal with your app.
 
+## Why organizations use mcp-savvy
+
+- **Connect MCP clients to AgentCore.** One `npx` entry bridges stdio to a
+  JWT-protected Runtime or Gateway; end users need no AWS credentials.
+- **Keep user tokens secure.** OIDC/PKCE sign-in stores and refreshes tokens
+  through the operating system's keychain.
+- **Expose only two tools.** `search-local` masks a large catalog behind
+  `${prefix}_search` and `${prefix}_call`, with no per-query AWS search charge.
+- **Use native Gateway search.** `search-gateway` keeps the same two tools but
+  searches AgentCore Gateway's semantic index.
+- **Bring the organization's identity.** Cognito, Entra ID, Okta, Auth0,
+  Keycloak, and other compatible OIDC providers are supported.
+- **Complete third-party OAuth.** AgentCore 3LO handling lets Gateway tools
+  access services such as GitHub after user consent.
+
 > **Disclaimer:** `mcp-savvy` is an independent, opinionated open-source
 > project. It is not an official AWS, Anthropic, or Model Context
 > Protocol resource, and is not affiliated with or endorsed by them.
@@ -17,37 +32,6 @@ your MCP client config and your agent talks to a JWT-authenticated
 AgentCore Runtime or Gateway over Streamable HTTP. The npm package
 contains the CLI bridge; the CDK constructs currently remain
 source workspaces used by this repository's examples.
-
-[![mcp-savvy architecture: MCP clients connect through the local bridge to protected AWS AgentCore runtimes and gateways](./docs/architecture-dark.webp)](./ARCHITECTURE.md)
-
-## What mcp-savvy gives organizations
-
-- **One MCP client entry for any compatible protected remote MCP.** Point
-  `npx mcp-savvy` at a Streamable HTTP server and use it from stdio-based
-  hosts such as Kiro, Claude Code, or Codex. The package handles browser
-  sign-in, token refresh, and secure local token storage.
-- **Two tools instead of a huge catalog.** Set `MCP_SAVVY_TOOL_MODE` to
-  `search-local` and the host sees only `${prefix}_search` and
-  `${prefix}_call`. It finds the relevant upstream tool first, then calls
-  it, without loading every tool schema into the model's context.
-- **A ready path to protected MCPs on AWS.** The repository's CDK building
-  blocks configure JWT-protected AgentCore Runtime and Gateway deployments,
-  so each team does not have to rebuild the same auth and infrastructure.
-- **Enterprise identity without IdP guesswork.** Use Cognito, import an
-  existing Cognito pool, or connect an OIDC provider directly. Presets and
-  setup guides cover Microsoft Entra ID, Okta, Auth0, and Keycloak,
-  including their different issuer, audience, and client-id claim rules.
-- **Native AgentCore Gateway search when quality matters.** Set the same
-  two-tool interface to `search-gateway` and searches use AgentCore
-  Gateway's managed semantic index; switch back to `search-local` for a
-  deterministic local search with no per-query AWS search charge.
-- **Third-party OAuth for Gateway tools.** The bridge completes AgentCore
-  Identity 3LO flows for targets such as GitHub, then retries the original
-  tool call after the user grants access.
-
-In short: configure the MCP once, choose the identity and search mode, and
-give users one small `npx` entry instead of custom auth, bridge, and tool
-discovery code.
 
 ## When to use mcp-savvy
 
