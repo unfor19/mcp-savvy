@@ -7,6 +7,7 @@
  */
 
 import { escapeHtml } from './escape.js';
+import { FAVICON_DATA_URI } from './favicon.js';
 
 const BASE_STYLES = `
   *{margin:0;padding:0;box-sizing:border-box}
@@ -76,6 +77,7 @@ export function renderCallbackPage(input: CallbackPageInput): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta name="referrer" content="no-referrer">
+<link rel="icon" type="image/png" href="${FAVICON_DATA_URI}">
 <title>${title}</title>
 <style>${BASE_STYLES}</style>
 </head>

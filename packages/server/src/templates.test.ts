@@ -102,4 +102,10 @@ describe('renderCallbackPage', () => {
         expect(html).toContain('http-equiv="Cache-Control" content="no-store"');
         expect(html).toContain('name="referrer" content="no-referrer"');
     });
+
+    it('embeds the mcp-savvy favicon', () => {
+        const html = renderCallbackPage({ kind: 'success', title: 't', message: 'm' });
+        expect(html).toContain('<link rel="icon" type="image/png"');
+        expect(html).toContain('href="data:image/png;base64,');
+    });
 });
