@@ -1,6 +1,6 @@
 # Documentation
 
-- [mcp-savvy 0.1.4 release candidate](./releases/0.1.4.md) — short summary, detailed AgentCore OAuth flow, security controls, tests, and explicit validation gaps.
+- [AgentCore interactive OAuth](./agentcore-oauth.md) — short explanation, detailed callback/session flow, identity guarantees, security controls, validation evidence, and remaining proof requirements.
 - [ChatGPT app guide](./chatgpt-app.md) — ChatGPT app integration details.
 - `architecture-dark.webp` — detailed architecture visual retained for reference.
 
