@@ -38,6 +38,24 @@ describe('scanRepository', () => {
         );
     });
 
+    it('scans untracked non-ignored files and skips ignored files', () => {
+        const repo = mkdtempSync(join(tmpdir(), 'mcp-savvy-secret-test-'));
+        git(repo, 'init', '-q');
+        writeFileSync(join(repo, '.gitignore'), 'ignored.txt\n');
+        git(repo, 'add', '.gitignore');
+        const exposed = 'AKIA' + 'U'.repeat(16);
+        const ignored = 'AKIA' + 'V'.repeat(16);
+        writeFileSync(join(repo, 'untracked.txt'), `credential=${exposed}\n`);
+        writeFileSync(join(repo, 'ignored.txt'), `credential=${ignored}\n`);
+
+        const result = scanRepository(repo);
+        expect(result.hits).toEqual([
+            expect.objectContaining({ file: 'untracked.txt', source: 'untracked' }),
+        ]);
+        expect(JSON.stringify(result.hits)).not.toContain(exposed);
+        expect(JSON.stringify(result.hits)).not.toContain(ignored);
+    });
+
     it('never returns matched secret bytes in finding metadata', () => {
         const repo = mkdtempSync(join(tmpdir(), 'mcp-savvy-secret-test-'));
         git(repo, 'init', '-q');
@@ -57,8 +75,8 @@ describe('scanRepository', () => {
         writeFileSync(
             join(repo, 'tracked.txt'),
             `AWS_ACCOUNT_ID=000000000000\nAWS_ACCOUNT_ID=${accountId}\n` +
-                `env: { account: '000000000000' }\nenv: { account: '${accountId}' }\n` +
-                `arn:aws:iam::111111111111:role/example\narn:aws:iam::${accountId}:role/example\n`,
+            `env: { account: '000000000000' }\nenv: { account: '${accountId}' }\n` +
+            `arn:aws:iam::111111111111:role/example\narn:aws:iam::${accountId}:role/example\n`,
         );
         writeFileSync(
             join(repo, 'placeholders.txt'),
