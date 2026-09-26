@@ -44,8 +44,9 @@ Gateway `-32042` URL elicitations and the tested AWS for SAP Runtime
 `requires_user_action` result. If you change versions, reconnect the MCP server;
 do not refresh a consumed authorization URL.
 
-See the [0.1.4 release notes](./docs/releases/0.1.4.md) for the exact flow, security
-controls, validation evidence, and what was not tested.
+See [AgentCore interactive OAuth](./docs/agentcore-oauth.md) for the exact flow,
+identity guarantees, security controls, validation evidence, and what remains
+unproven.
 
 ### Ask an AI agent to set it up
 
