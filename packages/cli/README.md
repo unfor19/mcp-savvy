@@ -34,14 +34,21 @@ global install, Node 20+. Drop this into your MCP client config
       "env": {
         "MCP_SAVVY_REMOTE_URL": "https://....bedrock-agentcore.us-east-1.amazonaws.com/mcp",
         "MCP_SAVVY_OIDC_ISSUER": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxx",
-        "MCP_SAVVY_CLIENT_ID": "your-app-client-id"
+        "MCP_SAVVY_CLIENT_ID": "your-app-client-id",
+        "MCP_SAVVY_COMPLETE_SESSION_URL": "https://your-api.example.com/complete-session"
       }
     }
   }
 }
 ```
 
-First run pops a browser tab for sign-in; the token caches in your OS
+`MCP_SAVVY_COMPLETE_SESSION_URL` is required only when AgentCore can request
+interactive resource authorization, including Gateway OAuth targets and Runtime
+flows such as AWS for SAP `USER_FEDERATION`. It enables the second loopback
+listener, authenticated session completion, and one automatic retry. Omit it
+for backends that never return such challenges.
+
+First run opens a browser tab for sign-in; the token caches in your OS
 keychain. Subsequent runs are silent until refresh expires. Every
 `MCP_SAVVY_*` var is documented in
 [`.env.example`](https://github.com/unfor19/mcp-savvy/blob/main/.env.example).

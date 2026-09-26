@@ -43,6 +43,12 @@ export interface ResponseInterceptorInput {
     /** The message the remote just sent. */
     readonly response: JSONRPCMessage;
     /**
+     * Whether the dispatcher can still replay this request. Interceptors that
+     * perform side effects before returning `retry` should stop when false.
+     * Omitted only by direct callers that predate retry-budget awareness.
+     */
+    readonly retryAvailable?: boolean;
+    /**
      * The host request that originated this response, if the bridge
      * still has it cached. `undefined` for unsolicited messages
      * (server-initiated requests, notifications, late frames).

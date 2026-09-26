@@ -34,6 +34,11 @@
         example-gateway-3lo-config example-gateway-3lo-add-user \
         example-gateway-3lo-login example-gateway-3lo-smoke \
         example-gateway-3lo-logout \
+        example-gateway-sap-okta-bootstrap example-gateway-sap-okta-synth \
+        example-gateway-sap-okta-diff example-gateway-sap-okta-deploy \
+        example-gateway-sap-okta-destroy example-gateway-sap-okta-config \
+        example-gateway-sap-okta-login example-gateway-sap-okta-smoke \
+        example-gateway-sap-okta-logout \
         example-kb-synth example-kb-diff \
         example-kb-deploy example-kb-destroy \
         example-kb-config example-kb-add-user \
@@ -132,7 +137,7 @@ python-test: ## Run dependency-free Python boundary tests
 fon-check: ## Run the fon code-quality audit
 	$(FON) check
 
-check-secrets: ## Scan tracked files for secrets (.env values + generic patterns)
+check-secrets: ## Scan tracked and untracked non-ignored files for secrets
 	$(NODE) scripts/check-secrets.mjs
 
 python-lock: ## Resolve and write reproducible Python runtime locks
@@ -724,6 +729,119 @@ example-gateway-3lo-logout: build ## Clear cached tokens for the deployed gatewa
 	MCP_SAVVY_REMOTE_URL=https://placeholder.example.com \
 	MCP_SAVVY_OIDC_ISSUER="$$ISSUER" \
 	MCP_SAVVY_CLIENT_ID="$$CLIENT" \
+		node packages/cli/dist/cli.cjs --logout
+
+
+# -----------------------------------------------------------------------------
+# gateway-sap-mcp-okta — Okta-gated Gateway with AWS for SAP MCP native target.
+# Requires a pre-existing SAP MCP Runtime and Cognito OAuth credential provider.
+# -----------------------------------------------------------------------------
+GW_SAP_OKTA_CDK := $(PNPM) --filter @mcp-savvy-examples/gateway-sap-mcp-okta-infra exec cdk
+OKTA_AUTH_SERVER_ID ?= default
+OKTA_AUDIENCE ?= api://default
+OKTA_SCOPES ?= openid profile email offline_access
+GW_SAP_OKTA_ENV = \
+	OKTA_DOMAIN="$(OKTA_DOMAIN)" \
+	OKTA_CLIENT_ID="$(OKTA_CLIENT_ID)" \
+	OKTA_AUTH_SERVER_ID="$(OKTA_AUTH_SERVER_ID)" \
+	OKTA_AUDIENCE="$(OKTA_AUDIENCE)" \
+	SAP_MCP_ENDPOINT="$(SAP_MCP_ENDPOINT)" \
+	SAP_MCP_OAUTH_PROVIDER_ARN="$(SAP_MCP_OAUTH_PROVIDER_ARN)" \
+	SAP_MCP_OAUTH_SECRET_ARN="$(SAP_MCP_OAUTH_SECRET_ARN)" \
+	SAP_MCP_SCOPES="$(SAP_MCP_SCOPES)"
+
+.PHONY: example-gateway-sap-okta-check
+example-gateway-sap-okta-check:
+	@if [ -z "$(OKTA_DOMAIN)" ] || [ -z "$(OKTA_CLIENT_ID)" ] || \
+		[ -z "$(SAP_MCP_ENDPOINT)" ] || [ -z "$(SAP_MCP_OAUTH_PROVIDER_ARN)" ] || \
+		[ -z "$(SAP_MCP_OAUTH_SECRET_ARN)" ] || [ -z "$(SAP_MCP_SCOPES)" ]; then \
+		printf 'Missing Okta or SAP MCP configuration. See examples/gateway-sap-mcp-okta/README.md.\n'; \
+		exit 1; \
+	fi
+
+example-gateway-sap-okta-bootstrap: example-gateway-sap-okta-check ## CDK bootstrap the account/region for gateway-sap-mcp-okta (run once)
+	@if [ -n "$(AWS_PROFILE)" ]; then \
+		ACCOUNT=$$(aws sts get-caller-identity --profile "$(AWS_PROFILE)" --query Account --output text); \
+	else \
+		ACCOUNT=$$(aws sts get-caller-identity --query Account --output text); \
+	fi; \
+	$(GW_SAP_OKTA_ENV) AWS_PROFILE=$(AWS_PROFILE) AWS_REGION=$(AWS_REGION) \
+		$(GW_SAP_OKTA_CDK) bootstrap aws://$$ACCOUNT/$(AWS_REGION)
+
+example-gateway-sap-okta-synth: example-gateway-sap-okta-check ## Synthesize the Okta-gated AWS for SAP MCP Gateway
+	$(GW_SAP_OKTA_ENV) AWS_PROFILE=$(AWS_PROFILE) AWS_REGION=$(AWS_REGION) \
+		$(GW_SAP_OKTA_CDK) synth --strict
+
+example-gateway-sap-okta-diff: example-gateway-sap-okta-check ## Show pending changes for the Okta-gated SAP MCP Gateway
+	$(GW_SAP_OKTA_ENV) AWS_PROFILE=$(AWS_PROFILE) AWS_REGION=$(AWS_REGION) \
+		$(GW_SAP_OKTA_CDK) diff
+
+example-gateway-sap-okta-deploy: example-gateway-sap-okta-diff ## Deploy the Okta-gated SAP MCP Gateway
+	$(GW_SAP_OKTA_ENV) AWS_PROFILE=$(AWS_PROFILE) AWS_REGION=$(AWS_REGION) \
+		$(GW_SAP_OKTA_CDK) deploy --all --require-approval=never
+
+example-gateway-sap-okta-destroy: example-gateway-sap-okta-check ## Destroy only the Okta-gated SAP MCP Gateway stack
+	$(GW_SAP_OKTA_ENV) AWS_PROFILE=$(AWS_PROFILE) AWS_REGION=$(AWS_REGION) \
+		$(GW_SAP_OKTA_CDK) destroy --all --force
+
+example-gateway-sap-okta-config: example-gateway-sap-okta-check ## Print client config for the deployed Okta-gated SAP MCP Gateway
+	@URL=$$($(CFN) describe-stacks --stack-name McpSavvySapOktaGateway \
+		--query 'Stacks[0].Outputs[?OutputKey==`GatewayUrl`].OutputValue' --output text 2>/dev/null); \
+	OKTA_HOST="$(OKTA_DOMAIN)"; \
+	OKTA_HOST=$${OKTA_HOST#https://}; OKTA_HOST=$${OKTA_HOST#http://}; OKTA_HOST=$${OKTA_HOST%/}; \
+	ISSUER="https://$$OKTA_HOST/oauth2/$(OKTA_AUTH_SERVER_ID)"; \
+	if [ -z "$$URL" ]; then \
+		printf 'Stack not deployed yet. Run: make example-gateway-sap-okta-deploy\n'; exit 1; \
+	fi; \
+	printf 'mcp-savvy client config (gateway-sap-mcp-okta):\n\n'; \
+	printf '  MCP_SAVVY_PROVIDER=oidc\n'; \
+	printf '  MCP_SAVVY_REMOTE_URL=%s\n' "$$URL"; \
+	printf '  MCP_SAVVY_OIDC_ISSUER=%s\n' "$$ISSUER"; \
+	printf '  MCP_SAVVY_CLIENT_ID=%s\n' "$(OKTA_CLIENT_ID)"; \
+	printf '  MCP_SAVVY_SCOPES="%s"\n' "$(OKTA_SCOPES)"; \
+	printf '  MCP_SAVVY_TOOL_MODE=passthrough\n\n'
+
+example-gateway-sap-okta-login: build example-gateway-sap-okta-check ## Login to the SAP MCP Gateway through Okta PKCE
+	@URL=$$($(CFN) describe-stacks --stack-name McpSavvySapOktaGateway \
+		--query 'Stacks[0].Outputs[?OutputKey==`GatewayUrl`].OutputValue' --output text 2>/dev/null); \
+	OKTA_HOST="$(OKTA_DOMAIN)"; \
+	OKTA_HOST=$${OKTA_HOST#https://}; OKTA_HOST=$${OKTA_HOST#http://}; OKTA_HOST=$${OKTA_HOST%/}; \
+	if [ -z "$$URL" ]; then \
+		printf 'Stack not deployed yet. Run: make example-gateway-sap-okta-deploy\n'; exit 1; \
+	fi; \
+	env -u MCP_SAVVY_CALLBACK_HOST -u MCP_SAVVY_CALLBACK_PORT -u MCP_SAVVY_CALLBACK_PATH \
+	MCP_SAVVY_PROVIDER=oidc \
+	MCP_SAVVY_REMOTE_URL="$$URL" \
+	MCP_SAVVY_OIDC_ISSUER="https://$$OKTA_HOST/oauth2/$(OKTA_AUTH_SERVER_ID)" \
+	MCP_SAVVY_CLIENT_ID="$(OKTA_CLIENT_ID)" \
+	MCP_SAVVY_SCOPES="$(OKTA_SCOPES)" \
+	MCP_SAVVY_TOOL_MODE=passthrough \
+		node packages/cli/dist/cli.cjs --login
+
+example-gateway-sap-okta-smoke: build example-gateway-sap-okta-login ## Smoke Okta login, MCP init, and SAP read-tool discovery
+	@URL=$$($(CFN) describe-stacks --stack-name McpSavvySapOktaGateway \
+		--query 'Stacks[0].Outputs[?OutputKey==`GatewayUrl`].OutputValue' --output text 2>/dev/null); \
+	OKTA_HOST="$(OKTA_DOMAIN)"; \
+	OKTA_HOST=$${OKTA_HOST#https://}; OKTA_HOST=$${OKTA_HOST#http://}; OKTA_HOST=$${OKTA_HOST%/}; \
+	env -u MCP_SAVVY_CALLBACK_HOST -u MCP_SAVVY_CALLBACK_PORT -u MCP_SAVVY_CALLBACK_PATH \
+	MCP_SAVVY_PROVIDER=oidc \
+	MCP_SAVVY_REMOTE_URL="$$URL" \
+	MCP_SAVVY_OIDC_ISSUER="https://$$OKTA_HOST/oauth2/$(OKTA_AUTH_SERVER_ID)" \
+	MCP_SAVVY_CLIENT_ID="$(OKTA_CLIENT_ID)" \
+	MCP_SAVVY_SCOPES="$(OKTA_SCOPES)" \
+	MCP_SAVVY_TOOL_MODE=passthrough \
+		node scripts/smoke/gateway/sap-okta.mjs
+
+example-gateway-sap-okta-logout: build ## Clear cached Okta tokens for gateway-sap-mcp-okta
+	@if [ -z "$(OKTA_DOMAIN)" ] || [ -z "$(OKTA_CLIENT_ID)" ]; then \
+		printf 'Missing OKTA_DOMAIN or OKTA_CLIENT_ID.\n'; exit 1; \
+	fi
+	@OKTA_HOST="$(OKTA_DOMAIN)"; \
+	OKTA_HOST=$${OKTA_HOST#https://}; OKTA_HOST=$${OKTA_HOST#http://}; OKTA_HOST=$${OKTA_HOST%/}; \
+	MCP_SAVVY_PROVIDER=oidc \
+	MCP_SAVVY_REMOTE_URL=https://placeholder.example.com \
+	MCP_SAVVY_OIDC_ISSUER="https://$$OKTA_HOST/oauth2/$(OKTA_AUTH_SERVER_ID)" \
+	MCP_SAVVY_CLIENT_ID="$(OKTA_CLIENT_ID)" \
 		node packages/cli/dist/cli.cjs --logout
 
 

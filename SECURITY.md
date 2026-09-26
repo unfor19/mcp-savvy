@@ -63,6 +63,34 @@ shuts down. Subsequent requests get a 404. There's also a hard
 timeout (default 5 minutes) after which the server closes whether
 or not a callback arrived.
 
+### AgentCore resource-authorization callback
+
+The second callback leg is separate from OIDC/PKCE sign-in. When AgentCore
+returns a resource-authorization URL, mcp-savvy:
+
+- validates HTTPS and the expected PAR-style `request_uri`;
+- binds `127.0.0.1:33424` before opening the browser;
+- accepts only `GET /oauth2/callback`;
+- requires `session_id` to exactly equal the one-time `request_uri`;
+- sends `{sessionUri}` plus the current Bearer JWT to the configured HTTPS
+  completion API; and
+- closes the listener after success, failure, or timeout.
+
+This leg does not reuse first-leg OAuth `state` or the PKCE verifier. Its
+correlation is the one-time session URI plus the authenticated completion
+request and the workload identity's registered return URL. A consumed URL
+returning `Invalid request` is expected replay resistance.
+
+Only one interceptor may own a request ID at a time; overlapping duplicate
+responses are dropped while completion is active. The retry budget is then
+supplied before side effects, so a sequential challenge after the one allowed
+replay is forwarded without opening another browser or reusing the authorization
+URL.
+
+Deployments must register the exact callback on every relevant workload
+identity. The current CDK construct registers Gateway workloads; direct Runtime
+support also requires Runtime workload registration by the owning deployment.
+
 ### Response hardening
 
 Every response carries:

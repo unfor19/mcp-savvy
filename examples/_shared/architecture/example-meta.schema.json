@@ -136,7 +136,8 @@
         "enum": [
           "cognito",
           "imported-cognito",
-          "entra"
+          "entra",
+          "okta"
         ]
       },
       "description": "IdP variants this example ships make-targets for."

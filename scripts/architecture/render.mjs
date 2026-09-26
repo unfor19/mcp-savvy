@@ -9,7 +9,12 @@ const STATUS_BADGE = {
 
 const BACKEND_LABEL = { runtime: 'AgentCore Runtime', gateway: 'AgentCore Gateway', lambda: 'Lambda MCP' };
 const FRONTING_LABEL = { direct: 'Direct (no front door)', 'rest-api': 'REST API front door' };
-const IDP_LABEL = { cognito: 'Cognito', 'imported-cognito': 'imported Cognito', entra: 'Entra ID' };
+const IDP_LABEL = {
+    cognito: 'Cognito',
+    'imported-cognito': 'imported Cognito',
+    entra: 'Entra ID',
+    okta: 'Okta',
+};
 
 /** Build the full ARCHITECTURE.md string from the overview and example metadata. */
 export function render(overview, examples) {

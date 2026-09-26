@@ -1,27 +1,19 @@
 /**
- * `ResponseInterceptor` factory for AgentCore Gateway 3LO completion.
+ * `ResponseInterceptor` factory for AgentCore OAuth completion.
  *
- * When a Gateway tool needs a third-party OAuth token (GitHub,
- * Slack, etc.), AgentCore Identity returns a JSON-RPC error with
- * `code: -32042 UrlElicitationRequired` and an `error.data.elicitations`
- * array carrying the per-elicitation `{ mode: 'url', url, elicitationId }`.
+ * AgentCore can request interactive authorization in two forms:
+ *   - Gateway targets return JSON-RPC error `-32042` with a URL elicitation.
+ *   - AWS for SAP Runtime tools return a successful JSON-RPC result whose
+ *     structured data contains `requires_user_action` and `auth_url`.
  *
- * The bridge needs to:
- *   1. Detect that error shape on a response that originated from a
- *      `tools/call` request.
- *   2. Run the bridge-side half of the second-leg flow via
- *      `completeGatewaySession(...)` — opens the browser, listens
- *      for AgentCore's loopback redirect, POSTs to the deployed
- *      `OAuthCompleteSessionApi`.
- *   3. Tell the bridge to retry the original `tools/call`. By the
- *      time the retry lands at the Gateway, the user's session is
- *      bound and the third-party OAuth token is on file, so the
- *      tool call succeeds and the host sees a normal result.
+ * For either form, the bridge:
+ *   1. Detects the authorization URL on a response to `tools/call`.
+ *   2. Runs `completeGatewaySession(...)`, which starts the loopback listener
+ *      before opening the browser and completes the AgentCore session.
+ *   3. Retries the original tool call after the user-specific token is stored.
  *
- * The factory is intentionally a pure function: pass it the things
- * that vary between deployments (complete-session URL, current
- * Bearer JWT supplier, browser launcher) and it returns a
- * `ResponseInterceptor` ready to plug into `StdioBridge`.
+ * The factory is intentionally pure: deployment-specific endpoints, tokens,
+ * browser behavior, and logging are supplied by the caller.
  */
 
 import {
@@ -30,7 +22,10 @@ import {
 } from '@mcp-savvy/auth';
 import type { AuthorizeBrowser, Logger } from '@mcp-savvy/core';
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
-import { isJSONRPCErrorResponse } from '@modelcontextprotocol/sdk/types.js';
+import {
+    isJSONRPCErrorResponse,
+    isJSONRPCResultResponse,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { ResponseAction, ResponseInterceptor } from './interceptors/response.js';
 import { asInterceptorFailure } from './interceptors/wrapError.js';
 
@@ -50,7 +45,7 @@ export interface GatewaySessionInterceptorInput {
     readonly completeSessionEndpoint: string;
     /**
      * Returns the user's IdP JWT — the same Bearer token the bridge
-     * is currently using to talk to the Gateway. Called once per
+     * is currently using to talk to AgentCore. Called once per
      * elicitation so a freshly refreshed token is always used.
      */
     readonly getUserToken: () => Promise<string> | string;
@@ -71,21 +66,24 @@ export interface GatewaySessionInterceptorInput {
     readonly completeSession?: (input: CompleteGatewaySessionInput) => Promise<unknown>;
 }
 
-/**
- * Build a `ResponseInterceptor` that transparently completes the 3LO
- * flow for AgentCore Gateway elicitation responses.
- */
+/** Transparently complete AgentCore URL authorization and retry the tool call. */
 export function gatewaySessionInterceptor(
     input: GatewaySessionInterceptorInput,
 ): ResponseInterceptor {
     const complete = input.completeSession ?? completeGatewaySession;
-    return async ({ response, originalRequest }): Promise<ResponseAction> => {
+    return async ({ response, originalRequest, retryAvailable }): Promise<ResponseAction> => {
         try {
             const elicitation = extractElicitation(response);
             if (!elicitation) return { kind: 'forward' };
             if (!isToolsCall(originalRequest)) {
                 input.logger?.warn(
-                    'gateway emitted url elicitation but no tools/call original request matched; forwarding',
+                    'AgentCore emitted URL authorization without a matching tools/call; forwarding',
+                );
+                return { kind: 'forward' };
+            }
+            if (retryAvailable === false) {
+                input.logger?.warn(
+                    'AgentCore emitted URL authorization after the retry budget was exhausted; forwarding',
                 );
                 return { kind: 'forward' };
             }
@@ -99,11 +97,11 @@ export function gatewaySessionInterceptor(
                     ...(input.brandName !== undefined ? { brandName: input.brandName } : {}),
                     ...(input.logger ? { logger: input.logger } : {}),
                 });
-                input.logger?.info('3LO completion succeeded; retrying original tool call');
+                input.logger?.info('OAuth completion succeeded; retrying original tool call');
                 return { kind: 'retry' };
             } catch (err) {
                 input.logger?.error(
-                    `3LO completion failed, forwarding original error: ${(err as Error).message}`,
+                    `OAuth completion failed; forwarding original response: ${(err as Error).message}`,
                 );
                 return { kind: 'forward' };
             }
@@ -113,30 +111,46 @@ export function gatewaySessionInterceptor(
     };
 }
 
-/** Minimal shape extracted from the Gateway's elicitation payload. */
+/** Minimal authorization URL extracted from an AgentCore response. */
 interface UrlElicitation {
     readonly url: string;
 }
 
-/**
- * Pull the first URL-mode elicitation out of a Gateway error
- * response, or return null if the message isn't one. We match the
- * SDK's `UrlElicitationRequiredError` parser: `error.data.elicitations`
- * is an array, each entry has `{ mode: 'url', url: '...' }`.
- */
+/** Extract either a Gateway error elicitation or Runtime user-action result. */
 function extractElicitation(msg: JSONRPCMessage): UrlElicitation | null {
+    return extractGatewayElicitation(msg) ?? extractRuntimeElicitation(msg);
+}
+
+/** Extract the first URL-mode elicitation from a Gateway error response. */
+function extractGatewayElicitation(msg: JSONRPCMessage): UrlElicitation | null {
     if (!isJSONRPCErrorResponse(msg)) return null;
     if (msg.error.code !== URL_ELICITATION_REQUIRED) return null;
-    const data = msg.error.data;
-    if (typeof data !== 'object' || data === null) return null;
-    const list = (data as { elicitations?: unknown }).elicitations;
+    const data = asRecord(msg.error.data);
+    const list = data?.['elicitations'];
     if (!Array.isArray(list) || list.length === 0) return null;
-    const first = list[0];
-    if (typeof first !== 'object' || first === null) return null;
-    const mode = (first as { mode?: unknown }).mode;
-    const url = (first as { url?: unknown }).url;
+    const first = asRecord(list[0]);
+    const mode = first?.['mode'];
+    const url = first?.['url'];
     if (mode !== 'url' || typeof url !== 'string' || url.length === 0) return null;
     return { url };
+}
+
+/** Extract AWS for SAP Runtime's structured interactive-authorization result. */
+function extractRuntimeElicitation(msg: JSONRPCMessage): UrlElicitation | null {
+    if (!isJSONRPCResultResponse(msg)) return null;
+    const result = asRecord(msg.result);
+    const structuredContent = asRecord(result?.['structuredContent']);
+    const toolResult = asRecord(structuredContent?.['result']);
+    const data = asRecord(toolResult?.['data']);
+    if (data?.['requires_user_action'] !== true) return null;
+    const url = data['auth_url'];
+    return typeof url === 'string' && url.length > 0 ? { url } : null;
+}
+
+/** Narrow untrusted extension data to a non-array object. */
+function asRecord(value: unknown): Record<string, unknown> | null {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+    return value as Record<string, unknown>;
 }
 
 /** True if the original host request was a `tools/call`. */

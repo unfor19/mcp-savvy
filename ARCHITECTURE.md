@@ -32,7 +32,7 @@ REST API front door.
 |                       | **Direct** | **REST API front door** |
 | --------------------- | ---------- | ----------------------- |
 | **AgentCore Runtime** | (A) [`minimal-mcp`](./examples/minimal-mcp) ✅ validated<br>(A2) [`kb-mcp`](./examples/kb-mcp) ✅ validated | — |
-| **AgentCore Gateway** | (B) [`gateway-kb-mcp`](./examples/gateway-kb-mcp) ✅ validated<br>(B) [`gateway-lambda-mcp`](./examples/gateway-lambda-mcp) ✅ validated<br>(C) [`gateway-3lo-mcp`](./examples/gateway-3lo-mcp) ✅ validated | — |
+| **AgentCore Gateway** | (B) [`gateway-kb-mcp`](./examples/gateway-kb-mcp) ✅ validated<br>(B) [`gateway-lambda-mcp`](./examples/gateway-lambda-mcp) ✅ validated<br>(C) [`gateway-3lo-mcp`](./examples/gateway-3lo-mcp) ✅ validated<br>(C) [`gateway-sap-mcp-okta`](./examples/gateway-sap-mcp-okta) 🚧 scaffold | — |
 | **Lambda MCP**        | — | (G) [`chatgpt-app-mcp`](./examples/chatgpt-app-mcp) ✅ validated |
 
 Identity support varies by example and is listed in each entry below.
@@ -196,6 +196,33 @@ Reach a partner API (GitHub, Slack, …) on the user's behalf. The first tool ca
 | `McpSavvy3loDemoGateway` | AgentCore Gateway (GitHub OpenAPI target) + OAuthCompleteSessionApi. |
 
 Compare with: [`gateway-lambda-mcp`](./examples/gateway-lambda-mcp).
+
+### (C) Okta Gateway + AWS for SAP MCP — `gateway-sap-mcp-okta`
+
+🚧 scaffold — synth-ready; live Okta, SAP MCP, and SAP acceptance pending
+
+An Okta-gated AgentCore Gateway that fronts AWS for SAP MCP Server as a native MCP target, using Cognito client credentials only on the private hop.
+
+Give MCP clients one Okta-protected Gateway endpoint for read-only SAP OData discovery and queries without exposing the SAP MCP Runtime directly. This supported v1 path authenticates the user at Gateway but intentionally does not claim named-user identity propagation into SAP.
+
+- **Shape**: AgentCore Gateway · Direct (no front door)
+- **Constructs**: `AgentCoreGateway`, `oktaExternalOidc`
+- **Identity**: Okta
+- **Tool mode**: `passthrough`
+- **Deploy**: `make example-gateway-sap-okta-deploy`
+
+| Host-facing tool | What it does |
+| --- | --- |
+| `sap___find_sap_services` | Finds allowed SAP OData services through the SAP MCP catalog. |
+| `sap___get_metadata` | Retrieves OData metadata for an allowed SAP service. |
+| `sap___odata_read` | Runs a read-only OData query using the SAP MCP server's SAP identity. |
+| `sap___odata_count` | Counts matching OData entities without enabling writes. |
+
+| Stack | Purpose |
+| --- | --- |
+| `McpSavvySapOktaGateway` | Okta-gated AgentCore Gateway with AWS for SAP MCP as an OAuth M2M target. |
+
+Compare with: [`gateway-3lo-mcp`](./examples/gateway-3lo-mcp), [`gateway-lambda-mcp`](./examples/gateway-lambda-mcp).
 
 ### (G) ChatGPT App (banking-grade) — `chatgpt-app-mcp`
 

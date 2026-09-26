@@ -24,6 +24,8 @@ export interface PendingRequest {
     readonly request: JSONRPCMessage;
     /** Number of `{ kind: 'retry' }` actions honoured so far. */
     retries: number;
+    /** True while an async interceptor owns this request's current response. */
+    interceptorActive?: boolean;
 }
 
 /** Callbacks the dispatcher needs from the owning bridge. */
@@ -52,17 +54,28 @@ export interface DispatchInput {
 export async function dispatchResponse(input: DispatchInput): Promise<void> {
     const id = correlationId(input.response);
     const entry = id !== undefined ? input.pending.get(id) : undefined;
+    if (entry?.interceptorActive) {
+        input.logger?.warn(
+            `duplicate response received while interceptor is active for id=${String(id)}; dropping`,
+        );
+        return;
+    }
+    if (entry) entry.interceptorActive = true;
     let action: ResponseAction;
     try {
         action = await input.interceptor({
             response: input.response,
             originalRequest: entry?.request,
+            retryAvailable:
+                entry !== undefined && entry.retries < input.maxRetries,
         });
     } catch (err) {
         input.logger?.error(
             `interceptor threw, forwarding response: ${(err as Error).message}`,
         );
         action = { kind: 'forward' };
+    } finally {
+        if (entry) entry.interceptorActive = false;
     }
     await applyAction(action, input, id, entry);
 }

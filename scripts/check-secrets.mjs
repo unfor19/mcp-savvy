@@ -11,8 +11,8 @@
  *  3. Known-sensitive AWS account ID patterns (12-digit numbers
  *     appearing in obviously credential-adjacent contexts).
  *
- * Runs against `git ls-files` output, so gitignored files are
- * automatically skipped. Exits non-zero on any hit.
+ * Runs against tracked index/worktree bytes plus untracked, non-ignored files.
+ * Gitignored files remain skipped. Exits non-zero on any hit.
  *
  * Usage:
  *   node scripts/check-secrets.mjs
@@ -111,6 +111,15 @@ function indexEntries(repoRoot) {
     });
 }
 
+function untrackedFiles(repoRoot) {
+    const output = execFileSync(
+        'git',
+        ['ls-files', '--others', '--exclude-standard', '-z'],
+        { cwd: repoRoot, encoding: 'buffer' },
+    );
+    return output.toString('utf8').split('\0').filter(Boolean);
+}
+
 function findHits(content, file, source, envSecrets) {
     const hits = [];
     for (const { key, value } of envSecrets) {
@@ -130,17 +139,32 @@ function findHits(content, file, source, envSecrets) {
     return hits;
 }
 
-/** Scan exact stage-0 blobs plus differing tracked working-tree bytes. */
+/** Read an index blob with a buffer sized from Git's exact object metadata. */
+function readGitBlob(repoRoot, oid) {
+    const sizeText = execFileSync('git', ['cat-file', '-s', oid], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+    }).trim();
+    const size = Number.parseInt(sizeText, 10);
+    if (!Number.isSafeInteger(size) || size < 0) {
+        throw new Error(`Invalid Git blob size for ${oid}`);
+    }
+    return execFileSync('git', ['cat-file', 'blob', oid], {
+        cwd: repoRoot,
+        encoding: 'buffer',
+        maxBuffer: size + 1,
+    });
+}
+
+/** Scan exact index blobs, differing tracked worktree bytes, and untracked files. */
 export function scanRepository(repoRoot = REPO_ROOT) {
     const envSecrets = loadEnvSecrets(repoRoot);
     const entries = indexEntries(repoRoot);
+    const untracked = untrackedFiles(repoRoot);
     const hits = [];
 
     for (const { file, oid } of entries) {
-        const staged = execFileSync('git', ['cat-file', 'blob', oid], {
-            cwd: repoRoot,
-            encoding: 'buffer',
-        }).toString('latin1');
+        const staged = readGitBlob(repoRoot, oid).toString('latin1');
         hits.push(...findHits(staged, file, 'index', envSecrets));
         try {
             const worktree = readFileSync(join(repoRoot, file)).toString('latin1');
@@ -149,7 +173,15 @@ export function scanRepository(repoRoot = REPO_ROOT) {
             // A staged deletion or absent worktree file has no extra bytes to scan.
         }
     }
-    return { hits, fileCount: entries.length, envCount: envSecrets.length };
+    for (const file of untracked) {
+        const content = readFileSync(join(repoRoot, file)).toString('latin1');
+        hits.push(...findHits(content, file, 'untracked', envSecrets));
+    }
+    return {
+        hits,
+        fileCount: entries.length + untracked.length,
+        envCount: envSecrets.length,
+    };
 }
 
 /** Scan an explicit set of files, such as the exact unpacked npm artifact. */
@@ -166,7 +198,7 @@ export function scanFiles(root, files, envRoot = REPO_ROOT) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     const { hits, fileCount, envCount } = scanRepository();
     if (hits.length === 0) {
-        console.log(`✓ secret scan clean (${fileCount} tracked files, ${envCount} .env values checked)`);
+        console.log(`✓ secret scan clean (${fileCount} repository files, ${envCount} .env values checked)`);
         process.exit(0);
     }
 

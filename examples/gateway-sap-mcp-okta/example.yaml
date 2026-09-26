@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../_shared/architecture/example-meta.schema.json
+slug: gateway-sap-mcp-okta
+title: Okta Gateway + AWS for SAP MCP
+matrixCell: C
+backend: gateway
+fronting: direct
+status: scaffold
+statusNote: synth-ready; live Okta, SAP MCP, and SAP acceptance pending
+tagline: >-
+  An Okta-gated AgentCore Gateway that fronts AWS for SAP MCP Server as a
+  native MCP target, using Cognito client credentials only on the private hop.
+useCase: >-
+  Give MCP clients one Okta-protected Gateway endpoint for read-only SAP OData
+  discovery and queries without exposing the SAP MCP Runtime directly. This
+  supported v1 path authenticates the user at Gateway but intentionally does
+  not claim named-user identity propagation into SAP.
+hostTools:
+  - name: sap___find_sap_services
+    summary: Finds allowed SAP OData services through the SAP MCP catalog.
+  - name: sap___get_metadata
+    summary: Retrieves OData metadata for an allowed SAP service.
+  - name: sap___odata_read
+    summary: Runs a read-only OData query using the SAP MCP server's SAP identity.
+  - name: sap___odata_count
+    summary: Counts matching OData entities without enabling writes.
+constructs:
+  - AgentCoreGateway
+  - oktaExternalOidc
+stacks:
+  - id: McpSavvySapOktaGateway
+    summary: Okta-gated AgentCore Gateway with AWS for SAP MCP as an OAuth M2M target.
+identityProviders:
+  - okta
+makePrefix: example-gateway-sap-okta
+toolMode: passthrough
+relatedExamples:
+  - gateway-3lo-mcp
+  - gateway-lambda-mcp
