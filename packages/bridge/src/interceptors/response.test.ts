@@ -193,10 +193,14 @@ describe('response actions', () => {
         await running;
     });
 
-    it('retry budget exhausted falls back to forwarding the response', async () => {
+    it('retry budget exhaustion is visible before interceptor side effects', async () => {
         const host = fakeTransport();
         const remote = fakeTransport();
-        const interceptor: ResponseInterceptor = (): ResponseAction => ({ kind: 'retry' });
+        const retryAvailability: Array<boolean | undefined> = [];
+        const interceptor: ResponseInterceptor = ({ retryAvailable }): ResponseAction => {
+            retryAvailability.push(retryAvailable);
+            return { kind: 'retry' };
+        };
         const bridge = new StdioBridge({
             remoteUrl: 'https://example.com/mcp',
             getAccessToken: async () => 'token',
@@ -213,9 +217,10 @@ describe('response actions', () => {
         remote.fireMessage(SAMPLE_RESPONSE);
         await tick();
         expect(remote.sent).toEqual([SAMPLE_REQUEST, SAMPLE_REQUEST]);
-        // Second response: budget exhausted, must forward.
+        // Second response exposes exhaustion before the interceptor chooses an action.
         remote.fireMessage(SAMPLE_RESPONSE);
         await tick();
+        expect(retryAvailability).toEqual([true, false]);
         expect(host.sent).toEqual([SAMPLE_RESPONSE]);
         host.fireClose();
         await running;

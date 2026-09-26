@@ -19,7 +19,7 @@
  *     ARN of the AgentCore Identity OAuth2 credential provider for
  *     GitHub. Configure once via the AWS console / CLI; reuse across
  *     gateways. Format:
- *       arn:aws:bedrock-agentcore:<region>:<account>:token-vault/default/oauth2credentialprovider/<name>
+ *       arn:aws:acps:<region>:<account>:token-vault/default/oauth2credentialprovider/<name>
  *
  * Synthesis is checked by cdk-nag (AwsSolutionsChecks) so policy
  * issues fail the build before they fail the deploy.

@@ -37,37 +37,69 @@ CDK preset: `entraExternalOidc()`, `oktaExternalOidc()`,
 `auth0ExternalOidc()`, `keycloakExternalOidc()`. See
 [examples/identity-providers/README.md](./examples/identity-providers/README.md).
 
-## AgentCore Identity 3LO orchestration
+## AgentCore OAuth session completion
 
 [AgentCore Identity](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity.html)
-is the AWS service that issues authorization URLs, holds OAuth
-credential providers, and exchanges third-party tokens via
+issues one-time authorization URLs, stores resource credentials, and binds the
+completed flow to the initiating user through
 [`CompleteResourceTokenAuth`](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/oauth2-authorization-url-session-binding.html).
-AgentCore Gateway uses it under the hood for any 3LO target
-(GitHub, Slack, etc.) — the gateway returns a `-32042
-UrlElicitationRequired` JSON-RPC error carrying the AgentCore-issued
-authorization URL, and expects the caller to drive the consent flow
-to completion before retrying.
+AgentCore currently surfaces interactive authorization in at least two MCP
+response shapes:
 
-The bridge handles all four steps:
+- Gateway targets return JSON-RPC error `-32042` with a URL elicitation.
+- AWS for SAP Runtime `USER_FEDERATION` returns a successful JSON-RPC envelope
+  whose structured data has `requires_user_action: true` and `auth_url`.
 
-1. Catches `-32042 UrlElicitationRequired` from the gateway and
-   opens the AgentCore authorization URL in the default browser.
-2. Spawns a second loopback listener on port 33424 to catch
-   `session_id` when AgentCore Identity redirects back from the
-   third-party IdP.
-3. POSTs `{ sessionUri, userToken }` to the deployed
-   `OAuthCompleteSessionApi` (an `@mcp-savvy/cdk` construct), which
-   calls `CompleteResourceTokenAuth` server-side. AgentCore extracts
-   the `sub` claim from `userToken` to bind the OAuth flow to the
-   user.
-4. Retries the original tool call. The freshly-bound third-party
-   token is now in the gateway's vault, so the OpenAPI / Smithy
-   target can call the partner API on the user's behalf.
+When `MCP_SAVVY_COMPLETE_SESSION_URL` is configured, the bridge handles both:
 
-Your host sees a normal successful response. The OAuth dance happens
-transparently between the two attempts. Live-validated against
-GitHub end-to-end.
+1. Correlates the authorization response to the original `tools/call`.
+2. Starts a one-shot listener on `127.0.0.1:33424` before opening the browser.
+3. Requires callback `session_id` to exactly equal the authorization URL's
+   opaque `request_uri`.
+4. POSTs `{ sessionUri }` with the current user Bearer JWT to the configured
+   completion API. The API calls `CompleteResourceTokenAuth`; the token is not
+   duplicated in the JSON body.
+5. Retries the original tool call once after successful binding.
+
+The dispatcher allows only one interceptor to own a request ID at a time, dropping
+overlapping duplicate responses while completion is active, and exposes retry
+availability before interceptor side effects. If a replayed call returns another
+authorization challenge after the retry budget is exhausted, mcp-savvy forwards
+it without opening a second browser flow. A
+consumed one-time URL may return `Invalid request`; do not refresh or reopen it.
+Start a new MCP tool invocation to obtain a fresh flow.
+
+The second leg is distinct from first-leg OIDC sign-in on port 33423. It uses
+one-time session-URI equality plus the authenticated completion request, not the
+first-leg PKCE verifier or OAuth `state`.
+
+Omitting `MCP_SAVVY_COMPLETE_SESSION_URL` intentionally leaves mcp-savvy as a
+verbatim forwarder for these responses. Setting it also selects MCP protocol
+`2025-11-25`, which AgentCore target authorization requires.
+
+Live validation:
+
+- Gateway `-32042` completion is validated end-to-end with the GitHub example.
+- SAP Runtime result detection, loopback completion, one-time replay rejection,
+  and successful metadata-only service discovery were validated on 2026-09-25
+  against an external AWS for SAP deployment. That proof did not read SAP
+  business records or establish two-user production isolation.
+
+## Native MCP server targets
+
+`AgentCoreGateway` also fronts remote Streamable HTTP MCP servers through the
+inherited `addMcpServerTarget(...)` API. Gateway synchronizes the target's
+capabilities and prefixes its tools with `targetName___`, while AgentCore
+Identity supplies target credentials. MCP targets support client credentials,
+authorization code, and token-exchange OAuth grants; the correct choice depends
+on whether the downstream server needs a service or named-user identity.
+
+The [Okta + AWS for SAP MCP example](./examples/gateway-sap-mcp-okta/) uses the
+currently supported service-identity path and documents the exact boundary: an
+Okta JWT gates the public Gateway, Cognito client credentials protect the SAP
+MCP Runtime hop, and SAP receives the technical identity configured on the SAP
+MCP server. It does not claim Okta-to-SAP user propagation. See its
+[boundary contract and failure matrix](./examples/gateway-sap-mcp-okta/CONTRACTS.md).
 
 ## Search-first tool flattening
 
@@ -204,20 +236,20 @@ The constructs below live in the private `@mcp-savvy/cdk` workspace
 and power the repository examples. They are not a separately
 published npm package.
 
-| Construct                 | What it gives you                                                                                                 |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `IdentityProvider`        | Tagged-union abstraction (`Cognito` vs `ExternalOidc`)                                                            |
-| `CognitoAuth`             | Cognito user pool with MFA, managed login UI, branding, callback URLs                                             |
-| `AgentCoreRuntime`        | AgentCore runtime with JWT authorizer wired to your `IdentityProvider`                                            |
-| `AgentCoreGateway`        | AgentCore gateway with the same identity wiring                                                                   |
-| `BedrockKnowledgeBase`    | Bedrock Knowledge Base over S3 Vectors (S3 source + Titan v2 + IAM); opt-in deploy-time corpus upload + ingestion |
-| `OAuthCompleteSessionApi` | REST API + Lambda for AgentCore Gateway 3LO completion                                                            |
-| `importCognito()`         | Bring-your-own-pool path for orgs with shared corporate user pools                                                |
-| `externalOidc()`          | Point at any OIDC issuer; set the client-id claim via `customClaim`                                               |
-| `entraExternalOidc()`     | Entra v2 preset (v2 issuer, `azp` claim)                                                                          |
-| `oktaExternalOidc()`      | Okta preset (custom-auth-server issuer, `cid` claim, `api://default`)                                             |
-| `auth0ExternalOidc()`     | Auth0 preset (`azp` claim, required API-identifier audience)                                                      |
-| `keycloakExternalOidc()`  | Keycloak preset (`/realms/<realm>` issuer, `azp` claim)                                                           |
+| Construct                 | What it gives you                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `IdentityProvider`        | Tagged-union abstraction (`Cognito` vs `ExternalOidc`)                                                                                    |
+| `CognitoAuth`             | Cognito user pool with MFA, managed login UI, branding, callback URLs                                                                     |
+| `AgentCoreRuntime`        | AgentCore runtime with JWT authorizer wired to your `IdentityProvider`                                                                    |
+| `AgentCoreGateway`        | AgentCore gateway with the same identity wiring                                                                                           |
+| `BedrockKnowledgeBase`    | Bedrock Knowledge Base over S3 Vectors (S3 source + Titan v2 + IAM); opt-in deploy-time corpus upload + ingestion                         |
+| `OAuthCompleteSessionApi` | HTTPS completion API for AgentCore interactive resource authorization; the owning deployment registers Gateway and/or Runtime return URLs |
+| `importCognito()`         | Bring-your-own-pool path for orgs with shared corporate user pools                                                                        |
+| `externalOidc()`          | Point at any OIDC issuer; set the client-id claim via `customClaim`                                                                       |
+| `entraExternalOidc()`     | Entra v2 preset (v2 issuer, `azp` claim)                                                                                                  |
+| `oktaExternalOidc()`      | Okta preset (custom-auth-server issuer, `cid` claim, `api://default`)                                                                     |
+| `auth0ExternalOidc()`     | Auth0 preset (`azp` claim, required API-identifier audience)                                                                              |
+| `keycloakExternalOidc()`  | Keycloak preset (`/realms/<realm>` issuer, `azp` claim)                                                                                   |
 
 The presets exist because access tokens don't agree on where the
 authorizing client id lives — Cognito uses `client_id`, Entra/Auth0/

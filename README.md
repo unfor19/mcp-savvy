@@ -9,28 +9,43 @@ with optional search-and-invoke that avoids loading a large catalog. Run `npx -y
 
 ## Why mcp-savvy? ([compare alternatives](./COMPARISON.md))
 
-| Problem | What mcp-savvy provides |
-| --- | --- |
-| Protected remote MCP | OIDC discovery, browser PKCE, secure storage, and refresh |
-| AI app expects a local command | Connects it securely to the remote MCP |
-| Tool requires third-party OAuth | AgentCore 3LO completion and automatic retry |
-| Large tool catalog | Optional two-tool search-and-call surface |
+| Problem                         | What mcp-savvy provides                                   |
+| ------------------------------- | --------------------------------------------------------- |
+| Protected remote MCP            | OIDC discovery, browser PKCE, secure storage, and refresh |
+| AI app expects a local command  | Connects it securely to the remote MCP                    |
+| Tool requires interactive OAuth | AgentCore session completion and one bounded retry        |
+| Large tool catalog              | Optional two-tool search-and-call surface                 |
 
 ## What you need
 
 Install [Node.js 20 or newer](https://nodejs.org/en/download), then get these
 values from your MCP provider:
 
-| Value | When needed |
-| --- | --- |
-| Remote MCP URL | Always |
-| OIDC issuer URL | Always |
-| OAuth public client ID | Always; this is not a secret |
-| Complete-session URL | For 3LO tools such as GitHub or Slack |
-| Tool mode | Optional; defaults to `passthrough` |
+| Value                  | When needed                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| Remote MCP URL         | Always                                                        |
+| OIDC issuer URL        | Always                                                        |
+| OAuth public client ID | Always; this is not a secret                                  |
+| Complete-session URL   | When AgentCore may request interactive resource authorization |
+| Tool mode              | Optional; defaults to `passthrough`                           |
 
-The complete-session URL is not the local callback URL. Deploy it with the
-[Gateway 3LO example](./examples/gateway-3lo-mcp/), or get it from your provider.
+The complete-session URL is not the local callback URL. It is required for
+Gateway OAuth targets and Runtime flows such as AWS for SAP `USER_FEDERATION`.
+Deploy it with the [Gateway 3LO example](./examples/gateway-3lo-mcp/), or get it
+from your provider. Omitting it intentionally leaves authorization responses
+unchanged for the MCP host to handle.
+
+### AgentCore OAuth, in short
+
+When a Gateway target or supported Runtime asks the user to authorize a resource,
+mcp-savvy opens the one-time URL, listens on localhost for the return, completes
+AgentCore's user/session binding, and retries the original tool once. It supports
+Gateway `-32042` URL elicitations and the tested AWS for SAP Runtime
+`requires_user_action` result. If you change versions, reconnect the MCP server;
+do not refresh a consumed authorization URL.
+
+See the [0.1.4 release notes](./docs/releases/0.1.4.md) for the exact flow, security
+controls, validation evidence, and what was not tested.
 
 ### Ask an AI agent to set it up
 
@@ -44,7 +59,7 @@ First, ask me for:
 2. The remote MCP URL.
 3. The OIDC issuer URL.
 4. The OAuth public client ID.
-5. Whether it exposes 3LO tools such as GitHub or Slack. If yes, ask for the provider-supplied complete-session URL. If unsure, do not guess.
+5. Whether AgentCore can request interactive resource authorization, including Gateway OAuth targets or Runtime USER_FEDERATION. If yes, ask for the provider-supplied complete-session URL. If unsure, do not guess.
 6. The recommended tool mode. Use passthrough if I was not given one.
 
 Use current official client documentation and run npx -y mcp-savvy. Inspect the existing MCP configuration first. If mcp-savvy is identical, do nothing; if it differs, show the difference and ask before replacing it. Never add a client secret or OAuth token. Preserve unrelated settings, validate the configuration, and tell me how to verify the connection.
@@ -261,10 +276,20 @@ for example to keep a demo separate from normal use.
 
 ## Troubleshooting
 
-- **Browser ends at localhost with `ERR_CONNECTION_REFUSED`:** the one-time
-  callback listener is no longer running. Return to the MCP client and retry the
-  operation so mcp-savvy starts a fresh listener. Do not publish screenshots
-  containing OAuth authorization codes or `state` parameters.
+- **Browser ends at localhost with `ERR_CONNECTION_REFUSED`:** no listener owned
+  that authorization flow. Confirm `MCP_SAVVY_COMPLETE_SESSION_URL` is set,
+  rebuild if using local source, and fully reconnect the MCP server process.
+  Then start a new tool call; do not refresh the old authorization URL.
+- **AgentCore page says `Invalid request`:** the one-time `request_uri` was
+  consumed, expired, or opened twice. If the MCP Savvy **Authorization Complete**
+  page appeared, completion succeeded; return to the MCP client. Otherwise start
+  a new tool call to obtain a fresh URL.
+- **Two browser tabs open for one challenge:** upgrade to a build that drops
+  overlapping same-request responses and checks the retry budget before OAuth
+  side effects. Older builds could start duplicate flows before replay handling.
+- **Local source change has no effect:** run the build, point the MCP entry at the
+  rebuilt `packages/cli/dist/cli.cjs`, and reconnect the stdio server. Existing
+  MCP processes do not reload changed JavaScript.
 - **Authentication took too long:** the callback listener expires after five
   minutes. Retry from the MCP client and complete the new browser flow.
 - **macOS asks for the login keychain password:** macOS may ask permission when
@@ -284,7 +309,7 @@ for example to keep a demo separate from normal use.
 
 `passthrough` is the default. For large catalogs, see [tool flattening](./FEATURES.md#search-first-tool-flattening) and [all environment options](./.env.example).
 
-Backend implementers: [examples](./examples/), [architecture](./ARCHITECTURE.md), and [security](./SECURITY.md).
+Backend implementers: [examples](./examples/), [architecture](./ARCHITECTURE.md), [the Okta-to-SAP Gateway scaffold](./examples/gateway-sap-mcp-okta/), and [security](./SECURITY.md).
 
 ## Development
 

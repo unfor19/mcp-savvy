@@ -60,7 +60,7 @@ export const EXAMPLE_META_SCHEMA = {
         identityProviders: {
             type: 'array',
             minItems: 1,
-            items: { type: 'string', enum: ['cognito', 'imported-cognito', 'entra'] },
+            items: { type: 'string', enum: ['cognito', 'imported-cognito', 'entra', 'okta'] },
             description: 'IdP variants this example ships make-targets for.',
         },
         makePrefix: { type: 'string', description: 'Makefile target prefix (e.g. example-minimal).' },

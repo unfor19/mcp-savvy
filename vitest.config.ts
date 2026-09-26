@@ -16,8 +16,9 @@ export default defineConfig({
         // Storage tests shell out to platform CLIs; isolate so one
         // package's keychain probe can't pollute another's process state.
         isolate: true,
-        // Default 5s is fine for unit tests; integration tests can
-        // override per-test with `it('...', { timeout: 30_000 }, ...)`.
+        // Limit file-level concurrency so parallel CDK synthesis stays below
+        // the normal 5s unit-test timeout on clean builds.
+        maxWorkers: 4,
         testTimeout: 5_000,
         coverage: {
             provider: 'v8',
