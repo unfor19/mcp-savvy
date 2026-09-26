@@ -1,5 +1,5 @@
 /**
- * Unit tests for the macOS Keychain backend (`security` CLI).
+ * Unit tests for the macOS Keychain backend (Security.framework via JXA).
  *
  * Inject a fake runner so the suite runs on any host without touching
  * the real keychain.
@@ -57,7 +57,7 @@ describe('isAvailable', () => {
 });
 
 describe('get', () => {
-    it('invokes `security find-generic-password -w` and trims trailing newline', () => {
+    it('reads through Keychain Services without putting the value in argv', () => {
         const r = recordingRunner();
         r.setRunImpl(() => 'secret-value\n');
         const k = new MacOSKeychain({
@@ -67,18 +67,19 @@ describe('get', () => {
             runner: r.runner,
         });
         expect(k.get()).toBe('secret-value');
-        expect(r.calls[0]?.cmd).toBe('security');
-        expect(r.calls[0]?.args).toEqual([
-            'find-generic-password',
-            '-s',
-            SERVICE,
-            '-a',
-            ACCOUNT,
-            '-w',
-        ]);
+        const call = r.calls[0];
+        expect(call?.cmd).toBe('/usr/bin/osascript');
+        expect(call?.args.slice(-3)).toEqual(['--', SERVICE, ACCOUNT]);
+        expect(call?.args).not.toContain('secret-value');
+        const scriptIndex = call?.args.indexOf('-e') ?? -1;
+        const script = call?.args[scriptIndex + 1] ?? '';
+        expect(script).toContain('SecItemCopyMatching');
+        expect(script).toContain('kSecReturnData');
+        expect(script).toContain('kSecMatchLimitOne');
+        expect(script).not.toContain('find-generic-password');
     });
 
-    it('returns null when the entry is absent (CLI throws)', () => {
+    it('returns null when the entry is absent (JXA throws)', () => {
         const r = recordingRunner();
         r.setRunImpl(() => {
             throw new Error('not found');
@@ -94,7 +95,7 @@ describe('get', () => {
 });
 
 describe('set', () => {
-    it('writes through Keychain Services without putting the payload in argv', () => {
+    it('updates in place through Keychain Services without putting the payload in argv', () => {
         const r = recordingRunner();
         const k = new MacOSKeychain({
             service: SERVICE,
@@ -103,14 +104,22 @@ describe('set', () => {
             runner: r.runner,
         });
         expect(k.set('payload')).toBe(true);
-        expect(r.calls[0]?.cmd).toBe('/usr/bin/osascript');
-        expect(r.calls[0]?.args).not.toContain('payload');
-        expect(r.calls[0]?.args).toContain(SERVICE);
-        expect(r.calls[0]?.args).toContain(ACCOUNT);
-        expect(r.calls[0]?.input).toBe('payload');
+        const call = r.calls[0];
+        expect(call?.cmd).toBe('/usr/bin/osascript');
+        expect(call?.args).not.toContain('payload');
+        expect(call?.args.slice(-3)).toEqual(['--', SERVICE, ACCOUNT]);
+        expect(call?.input).toBe('payload');
+        const scriptIndex = call?.args.indexOf('-e') ?? -1;
+        const script = call?.args[scriptIndex + 1] ?? '';
+        expect(script).toContain('SecItemUpdate');
+        expect(script).toContain('errSecItemNotFound');
+        expect(script).toContain('SecItemAdd');
+        expect(script).not.toContain('SecItemDelete');
+        expect(script.indexOf('SecItemUpdate')).toBeLessThan(script.indexOf('errSecItemNotFound'));
+        expect(script.indexOf('errSecItemNotFound')).toBeLessThan(script.indexOf('SecItemAdd'));
     });
 
-    it('returns false when the add fails', () => {
+    it('returns false when the write fails', () => {
         const r = recordingRunner();
         r.runner.runWithStdin = () => ({ status: 1 });
         const k = new MacOSKeychain({
