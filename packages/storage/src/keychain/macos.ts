@@ -1,13 +1,44 @@
 /**
- * macOS Keychain backend via the `security` CLI.
+ * macOS Keychain backend via Security.framework and JXA.
  *
- * No native dependency: we shell out to the system tool that ships
+ * No native dependency: we use the system `osascript` tool that ships
  * with macOS, so `npx mcp-savvy` works without node-gyp.
  */
 
 import { platform } from 'node:os';
 import type { KeychainBackend, KeychainBackendOptions } from './types.js';
 import { nodeRunner, type Runner } from '../runner.js';
+
+const GET_PASSWORD_JXA = String.raw`
+ObjC.import('Foundation');
+ObjC.import('Security');
+
+function run(argv) {
+    const secClass = ObjC.castRefToObject($.kSecClass);
+    const genericPassword = ObjC.castRefToObject($.kSecClassGenericPassword);
+    const attrService = ObjC.castRefToObject($.kSecAttrService);
+    const attrAccount = ObjC.castRefToObject($.kSecAttrAccount);
+    const returnData = ObjC.castRefToObject($.kSecReturnData);
+    const matchLimit = ObjC.castRefToObject($.kSecMatchLimit);
+    const matchLimitOne = ObjC.castRefToObject($.kSecMatchLimitOne);
+    const trueValue = ObjC.castRefToObject($.kCFBooleanTrue);
+    const query = $.NSMutableDictionary.alloc.init;
+    query.setObjectForKey(genericPassword, secClass);
+    query.setObjectForKey($(argv[0]), attrService);
+    query.setObjectForKey($(argv[1]), attrAccount);
+    query.setObjectForKey(trueValue, returnData);
+    query.setObjectForKey(matchLimitOne, matchLimit);
+    const result = Ref();
+    const status = $.SecItemCopyMatching(query, result);
+    if (status !== Number($.errSecSuccess)) {
+        throw new Error('Keychain read failed with status ' + status);
+    }
+    const data = ObjC.castRefToObject(result[0]);
+    const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding);
+    if (!text) throw new Error('Keychain value is not valid UTF-8');
+    return ObjC.unwrap(text);
+}
+`;
 
 const SET_PASSWORD_JXA = String.raw`
 ObjC.import('Foundation');
@@ -23,15 +54,22 @@ function run(argv) {
     const attrService = ObjC.castRefToObject($.kSecAttrService);
     const attrAccount = ObjC.castRefToObject($.kSecAttrAccount);
     const valueDataKey = ObjC.castRefToObject($.kSecValueData);
+    const valueData = $(value).dataUsingEncoding($.NSUTF8StringEncoding);
     const query = $.NSMutableDictionary.alloc.init;
     query.setObjectForKey(genericPassword, secClass);
     query.setObjectForKey($(argv[0]), attrService);
     query.setObjectForKey($(argv[1]), attrAccount);
-    $.SecItemDelete(query);
-    const item = $.NSMutableDictionary.dictionaryWithDictionary(query);
-    item.setObjectForKey($(value).dataUsingEncoding($.NSUTF8StringEncoding), valueDataKey);
-    const status = $.SecItemAdd(item, $());
-    if (status !== 0) throw new Error('SecItemAdd failed with status ' + status);
+    const updates = $.NSMutableDictionary.alloc.init;
+    updates.setObjectForKey(valueData, valueDataKey);
+    let status = $.SecItemUpdate(query, updates);
+    if (status === Number($.errSecItemNotFound)) {
+        const item = $.NSMutableDictionary.dictionaryWithDictionary(query);
+        item.setObjectForKey(valueData, valueDataKey);
+        status = $.SecItemAdd(item, $());
+    }
+    if (status !== Number($.errSecSuccess)) {
+        throw new Error('Keychain write failed with status ' + status);
+    }
 }
 `;
 
@@ -58,7 +96,7 @@ export class MacOSKeychain implements KeychainBackend {
         this.currentPlatform = opts.platform ?? platform();
     }
 
-    /** True only on Darwin; the `security` binary ships with the OS. */
+    /** True only on Darwin; Security.framework ships with macOS. */
     isAvailable(): boolean {
         return this.currentPlatform === 'darwin';
     }
@@ -66,13 +104,14 @@ export class MacOSKeychain implements KeychainBackend {
     /** Read the password for our service+account, or null if not set. */
     get(): string | null {
         try {
-            const out = this.runner.run('security', [
-                'find-generic-password',
-                '-s',
+            const out = this.runner.run('/usr/bin/osascript', [
+                '-l',
+                'JavaScript',
+                '-e',
+                GET_PASSWORD_JXA,
+                '--',
                 this.service,
-                '-a',
                 this.account,
-                '-w',
             ]);
             return out.replace(/\n$/, '');
         } catch {
@@ -80,12 +119,11 @@ export class MacOSKeychain implements KeychainBackend {
         }
     }
 
-    /** Replace any existing entry. Returns true on success. */
+    /** Update an existing entry without replacing its access controls. */
     set(value: string): boolean {
         try {
-            // `security add-generic-password -w` reads from /dev/tty rather than
-            // stdin. JXA lets us call Keychain Services directly while keeping
-            // the secret on stdin and out of argv and temporary files.
+            // JXA lets us call Keychain Services directly while keeping the
+            // secret on stdin and out of argv and temporary files.
             const result = this.runner.runWithStdin('/usr/bin/osascript', [
                 '-l',
                 'JavaScript',
