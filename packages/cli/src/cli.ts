@@ -11,9 +11,9 @@
  * `tokenManager.ts` so it can be unit-tested without a subprocess.
  */
 
-import { createLogger, McpSavvyError } from '@mcp-savvy/core';
+import { McpSavvyError } from '@mcp-savvy/core';
 import { CognitoProvider, OidcPkceProvider } from '@mcp-savvy/auth';
-import { resolveTokenStore, LockCoordinator } from '@mcp-savvy/storage';
+import { LockCoordinator } from '@mcp-savvy/storage';
 import { CallbackServer } from '@mcp-savvy/server';
 import {
     StdioBridge,
@@ -27,7 +27,7 @@ import {
     type ResponseInterceptor,
 } from '@mcp-savvy/bridge';
 import { loadConfig, type CliConfig } from './env.js';
-import { deriveNamespace } from './namespace.js';
+import { buildAuthenticationDependencies } from './runtime/authDependencies.js';
 import {
     runBridge,
     login,
@@ -104,15 +104,23 @@ export function parseArgs(argv: readonly string[]): Command {
     }
 }
 
+/** True when the configured upstream is an AWS AgentCore endpoint. */
+function isAgentCoreRemote(remoteUrl: string): boolean {
+    const hostname = new URL(remoteUrl).hostname;
+    const isAwsHostname =
+        hostname.endsWith('.amazonaws.com') || hostname.endsWith('.amazonaws.com.cn');
+    return isAwsHostname &&
+        (hostname.includes('.bedrock-agentcore.') || hostname.startsWith('bedrock-agentcore.'));
+}
+
 /** Build the production dependency set from a config. */
 export function buildDeps(config: CliConfig): CommandDeps {
-    const namespace = config.tokenNamespace ?? deriveNamespace(config.issuer, config.clientId);
-    const logger = createLogger({ name: 'mcp-savvy', level: config.debug ? 'debug' : 'info' });
-    const store = resolveTokenStore({ namespace, dataDir: config.dataDir }, logger);
+    const authDependencies = buildAuthenticationDependencies(config);
+    const { store, logger, diagnostics, effectiveIdentity, namespace } = authDependencies;
     // Single shared cross-process mutex. Phase 5 commands and Phase 7
     // `Cli.cleanup` release outstanding handles through this instance.
     const lock = new LockCoordinator({
-        dataDir: config.dataDir,
+        dataDir: effectiveIdentity.dataDir,
         stalenessThresholdMs: config.lockStaleMs,
         logger,
     });
@@ -194,6 +202,7 @@ export function buildDeps(config: CliConfig): CommandDeps {
             remoteUrl: config.remoteUrl,
             getAccessToken,
             logger,
+            diagnostics,
             requestInterceptor,
             responseInterceptor,
             ...(mcpProtocolVersion ? { mcpProtocolVersion } : {}),
@@ -205,10 +214,15 @@ export function buildDeps(config: CliConfig): CommandDeps {
         createCallbackServer,
         createBridge,
         logger,
+        diagnostics,
+        effectiveIdentity,
+        backendMetadata: authDependencies.backendMetadata,
         openBrowser: defaultOpenBrowser,
         lock,
         namespace,
         lockTimeoutMs: config.lockTimeoutMs,
+        preferIdentityToken:
+            config.completeSessionUrl !== undefined || isAgentCoreRemote(config.remoteUrl),
     };
 }
 

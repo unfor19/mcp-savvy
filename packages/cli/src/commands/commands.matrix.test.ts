@@ -35,6 +35,7 @@ import {
     fakeCallbackServer,
     fakeLogger,
     TEST_CONFIG,
+    TEST_DIAGNOSTICS,
     TEST_LOCK_DEPS,
 } from '../testFixtures.js';
 
@@ -77,11 +78,17 @@ describe('exit-code matrix (design.md section commands)', () => {
     // Row 1: cached tokens are fresh → command returns 0 without launching a browser.
     it('row 1: --login fresh cache → 0 (no browser launch)', async () => {
         let opens = 0;
+        const diagnosticCalls: string[] = [];
         const store = memoryStore(tokenData({ access_token: 'cached' }));
         const code = await login(
             TEST_CONFIG,
             matrixDeps({
                 store,
+                diagnostics: {
+                    ...TEST_DIAGNOSTICS,
+                    credential: (reason, hasRefresh) =>
+                        diagnosticCalls.push(`${reason}:${String(hasRefresh)}`),
+                },
                 openBrowser: () => {
                     opens += 1;
                 },
@@ -90,6 +97,7 @@ describe('exit-code matrix (design.md section commands)', () => {
         expect(code).toBe(0);
         expect(opens).toBe(0);
         expect(store.inspect()?.access_token).toBe('cached');
+        expect(diagnosticCalls).toEqual(['credential-fresh:true']);
     });
 
     // Row 2: refresh path succeeds → command returns 0.
@@ -108,13 +116,31 @@ describe('exit-code matrix (design.md section commands)', () => {
     // Row 3: `--force-login` clears then runs PKCE → command returns 0.
     it('row 3: --force-login PKCE → 0', async () => {
         const store = memoryStore(tokenData({ access_token: 'old' }));
+        const diagnosticCalls: string[] = [];
+        const browserObservations: string[][] = [];
         const auth = scriptedAuth({
             prepareAuthorize: async () => PKCE_PREP,
             exchangeCode: async () => tokenData({ access_token: 'pkce' }),
         });
-        const code = await forceLogin(TEST_CONFIG, matrixDeps({ store, auth }));
+        const code = await forceLogin(
+            TEST_CONFIG,
+            matrixDeps({
+                store,
+                auth,
+                diagnostics: {
+                    ...TEST_DIAGNOSTICS,
+                    refresh: (reason) => diagnosticCalls.push(`refresh:${reason}`),
+                    interactiveSignIn: (reason) =>
+                        diagnosticCalls.push(`interactive:${reason}`),
+                },
+                openBrowser: async () => browserObservations.push([...diagnosticCalls]),
+            }),
+        );
         expect(code).toBe(0);
         expect(store.inspect()?.access_token).toBe('pkce');
+        expect(browserObservations).toEqual([
+            ['refresh:refresh-unavailable', 'interactive:credential-missing'],
+        ]);
     });
 
     // Row 4: refresh fails, PKCE fallback succeeds → command returns 0 with warn-then-info.
@@ -133,25 +159,45 @@ describe('exit-code matrix (design.md section commands)', () => {
         const code = await login(TEST_CONFIG, matrixDeps({ store, auth, logger }));
         expect(code).toBe(0);
         expect(store.inspect()?.access_token).toBe('pkce-fresh');
-        expect(logger.records.some((r) => r.level === 'warn')).toBe(true);
+        expect(logger.records.some((r) => r.level === 'warn')).toBe(false);
         expect(logger.records.some((r) => r.msg === 'signed in; tokens cached')).toBe(true);
     });
 
     // Row 5: lock acquisition timeout propagates LockError; mapping → 4.
-    it('row 5: lock timeout → LockError propagates; exitCodeForError → 4', async () => {
+    it('row 5: lock timeout reports diagnostics with zero authentication side effects', async () => {
+        const sideEffects: string[] = [];
+        const diagnosticCalls: string[] = [];
         const lock = {
             withLock: async () => {
                 throw new LockError(
                     'LOCK_ACQUISITION_TIMEOUT',
-                    'lock acquisition for namespace test-namespace timed out after 300000ms',
+                    'lock acquisition timed out',
                 );
             },
         } as unknown as CommandDeps['lock'];
-        const deps = matrixDeps({ lock });
+        const deps = matrixDeps({
+            lock,
+            store: {
+                get: async () => {
+                    sideEffects.push('store-get');
+                    return null;
+                },
+                set: async () => sideEffects.push('store-set'),
+                clear: async () => sideEffects.push('store-clear'),
+            },
+            openBrowser: async () => sideEffects.push('browser'),
+            diagnostics: {
+                ...TEST_DIAGNOSTICS,
+                lockTimeout: (namespace, timeoutMs) =>
+                    diagnosticCalls.push(`${namespace}:${String(timeoutMs)}`),
+            },
+        });
         const err = await login(TEST_CONFIG, deps).catch((e: Error) => e);
         expect(err).toBeInstanceOf(LockError);
         expect((err as LockError).code).toBe('LOCK_ACQUISITION_TIMEOUT');
         expect(exitCodeForError(err as Error, deps)).toBe(4);
+        expect(sideEffects).toEqual([]);
+        expect(diagnosticCalls).toEqual(['test-namespace:300000']);
     });
 
     // Row 6: refresh + PKCE both fail → command throws; the canonical

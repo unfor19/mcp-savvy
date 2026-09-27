@@ -6,6 +6,17 @@ When an AgentCore tool needs user authorization, mcp-savvy opens the one-time au
 
 For the tested AWS for SAP flow, this means the Okta-authenticated caller can initiate SAP user federation and obtain a user-bound SAP resource token. A successful SAP catalog call proves that the completed resource credential was usable. It does **not**, by itself, prove that SAP audited the request as the same human who signed in to the outer Okta application. That final claim requires SAP audit evidence and a two-user isolation test.
 
+AgentCore reuses a completed resource access token and automatically uses a
+provider refresh token when one was issued. Therefore, a new outer OIDC login for
+the same user, workload, provider, and scopes should not itself require new SAP
+consent. Reauthorization remains necessary after revocation, an unusable or
+unrefreshable credential, a cache-key change, or an explicit forced-authentication
+request from the Runtime.
+
+The outer bearer selection is AgentCore-aware: mcp-savvy prefers an available
+OIDC ID token and falls back to the access token. Generic OAuth endpoints continue
+using access tokens.
+
 ## Supported authorization responses
 
 AgentCore currently exposes interactive resource authorization in at least two MCP response shapes:
@@ -24,10 +35,11 @@ Set `MCP_SAVVY_COMPLETE_SESSION_URL` when the upstream can return either form. W
 
 1. The MCP host starts mcp-savvy.
 2. mcp-savvy authenticates the human with the configured OIDC provider using Authorization Code + PKCE.
-3. It sends that user's access token to the protected AgentCore Gateway or Runtime endpoint.
+3. It sends the selected user Bearer JWT to the protected AgentCore Gateway or Runtime endpoint: an available OIDC ID token is preferred, with access-token fallback.
 4. AgentCore validates the token and associates the request with that user identity.
 5. When a downstream resource needs consent, AgentCore returns a one-time authorization URL and session URI.
-6. mcp-savvy validates the URL, binds `127.0.0.1:33424`, and only then opens the browser.
+6. mcp-savvy waits for exclusive ownership of `127.0.0.1:33424`, validates the
+   URL, binds the callback, and only then opens the browser.
 7. The downstream authorization server authenticates/authorizes a user. In the tested SAP composition, SAP OAuth2 redirects browser authentication to Okta SAML and SAP maps that assertion to a local SAP user.
 8. AgentCore redirects the browser to mcp-savvy with `session_id`.
 9. mcp-savvy requires `session_id` to exactly match the original `request_uri`.
@@ -44,7 +56,7 @@ The first callback and second callback are distinct:
 
 ### What the design guarantees
 
-- The Gateway/Runtime request starts with the OIDC access token for the person who authenticated to the MCP client.
+- The Gateway/Runtime request starts with the selected OIDC Bearer token for the person who authenticated to the MCP client: ID token when available, otherwise access token.
 - `CompleteResourceTokenAuth` binds the browser-completed resource authorization to that initiating AgentCore user context.
 - SAP `USER_FEDERATION` obtains a user-specific SAP OAuth token rather than a shared client-credentials token.
 - SAP applies the roles of the SAP user represented by that SAP token.

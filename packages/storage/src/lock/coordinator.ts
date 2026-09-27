@@ -10,6 +10,7 @@
  * stdout is reserved for MCP JSON-RPC frames.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { stat } from 'node:fs/promises';
 import { mkdir } from 'node:fs/promises';
 import * as path from 'node:path';
@@ -35,7 +36,7 @@ const NOOP_LOGGER: Logger = {
 
 interface Reentry {
     handle: LockHandle;
-    count: number;
+    active: boolean;
 }
 
 interface LockState {
@@ -50,7 +51,7 @@ export class LockCoordinator {
     private readonly locksDir: string;
     private readonly logger: Logger;
     private locksDirEnsured = false;
-    private readonly reentry = new Map<string, Reentry>();
+    private readonly ownership = new AsyncLocalStorage<ReadonlyMap<string, Reentry>>();
     private readonly lockStates = new Map<string, LockState>();
 
     /** Construct a coordinator; validates the heartbeat / staleness ratio. */
@@ -167,34 +168,24 @@ export class LockCoordinator {
         if (releaseErr) throw releaseErr;
     }
 
-    /** Acquire, run `fn`, release. Short-circuits reentry within the same process. */
+    /** Acquire, run `fn`, release; only the owning async context may re-enter. */
     async withLock<T>(
         opts: AcquireOptions,
         fn: (handle: LockHandle) => Promise<T>,
     ): Promise<T> {
-        const existing = this.reentry.get(opts.namespace);
-        if (existing) {
-            existing.count += 1;
-            try {
-                return await fn(existing.handle);
-            } finally {
-                existing.count -= 1;
-            }
-        }
+        const existing = this.ownership.getStore()?.get(opts.namespace);
+        if (existing?.active) return fn(existing.handle);
 
         const handle = await this.acquire(opts);
-        this.reentry.set(opts.namespace, { handle, count: 1 });
+        const inherited = this.ownership.getStore();
+        const owned = new Map(inherited ?? []);
+        const entry: Reentry = { handle, active: true };
+        owned.set(opts.namespace, entry);
         try {
-            return await fn(handle);
+            return await this.ownership.run(owned, () => fn(handle));
         } finally {
-            const entry = this.reentry.get(opts.namespace);
-            if (entry) {
-                entry.count -= 1;
-                if (entry.count <= 0) {
-                    this.reentry.delete(opts.namespace);
-                    await this.release(handle);
-                }
-            }
+            entry.active = false;
+            await this.release(handle);
         }
     }
 

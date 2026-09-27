@@ -14,6 +14,12 @@ import type { RequestInterceptor } from './interceptors/request.js';
  */
 export type TokenProvider = (input: { forceRefresh: boolean }) => Promise<string>;
 
+/** Receives allowlisted process-local reauthentication diagnostics. */
+export interface ReauthenticationDiagnosticEmitter {
+    /** Report the consumed attempt count and configured recovery budget. */
+    reauthentication(consumedAttempts: number, budget: number): void;
+}
+
 /** Options for `StdioBridge`. */
 export interface StdioBridgeOptions {
     /** Streamable-HTTP MCP endpoint. */
@@ -22,6 +28,8 @@ export interface StdioBridgeOptions {
     getAccessToken: TokenProvider;
     /** Optional logger. */
     logger?: Logger;
+    /** Authentication event sink for bounded unauthorized-response recovery. */
+    diagnostics?: ReauthenticationDiagnosticEmitter;
     /**
      * How many times we'll re-establish the upstream connection on a
      * 401 before giving up. Default 1 (one retry after the initial

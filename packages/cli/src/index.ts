@@ -7,3 +7,8 @@ export {
     DEFAULT_CALLBACK_PATH,
 } from './env.js';
 export { deriveNamespace } from './namespace.js';
+export {
+    resolveEffectiveCacheIdentity,
+    type EffectiveCacheIdentity,
+    type EffectiveCacheIdentityInput,
+} from './identity/index.js';

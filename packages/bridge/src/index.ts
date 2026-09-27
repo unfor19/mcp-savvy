@@ -10,7 +10,11 @@ export type {
 export type { RemoteTransportFactory } from './remoteTransport.js';
 export { BRIDGE_ERROR_CODES, categorizeBridgeError } from './bridgeErrors.js';
 export type { BridgeErrorCategory } from './bridgeErrors.js';
-export type { StdioBridgeOptions, TokenProvider } from './types.js';
+export type {
+    ReauthenticationDiagnosticEmitter,
+    StdioBridgeOptions,
+    TokenProvider,
+} from './types.js';
 export { passThroughInterceptor } from './interceptors/response.js';
 export type {
     ResponseAction,

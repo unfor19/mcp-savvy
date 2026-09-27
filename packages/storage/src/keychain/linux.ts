@@ -8,8 +8,31 @@
  */
 
 import { platform } from 'node:os';
-import type { KeychainBackend, KeychainBackendOptions } from './types.js';
+import {
+    KeychainReadError,
+    sanitizeKeychainCommandFailure,
+    type KeychainBackend,
+    type KeychainBackendOptions,
+    type KeychainReadResult,
+} from './types.js';
 import { nodeRunner, type Runner } from '../runner.js';
+
+function hasEmptyStderr(error: object): boolean {
+    if (!("stderr" in error)) return false;
+    const stderr = error.stderr;
+    if (typeof stderr === 'string') return stderr.length === 0;
+    return Buffer.isBuffer(stderr) && stderr.length === 0;
+}
+
+function isDocumentedMissing(error: unknown): boolean {
+    return Boolean(
+        error &&
+        typeof error === 'object' &&
+        'status' in error &&
+        error.status === 1 &&
+        hasEmptyStderr(error),
+    );
+}
 
 /** Constructor options for `LinuxSecretService`. */
 export interface LinuxSecretServiceOptions extends KeychainBackendOptions {
@@ -45,8 +68,8 @@ export class LinuxSecretService implements KeychainBackend {
         }
     }
 
-    /** Read via `secret-tool lookup`. */
-    get(): string | null {
+    /** Read and classify the local Secret Service entry. */
+    get(): KeychainReadResult {
         try {
             const out = this.runner.run('secret-tool', [
                 'lookup',
@@ -55,10 +78,14 @@ export class LinuxSecretService implements KeychainBackend {
                 'account',
                 this.account,
             ]);
-            const trimmed = out.replace(/\n$/, '');
-            return trimmed.length > 0 ? trimmed : null;
-        } catch {
-            return null;
+            const value = out.replace(/\n$/, '');
+            return value.includes('\uFFFD')
+                ? { status: 'unreadable-local-entry' }
+                : { status: 'found', value };
+        } catch (error) {
+            if (isDocumentedMissing(error)) return { status: 'missing' };
+            if (error instanceof KeychainReadError) throw error;
+            throw sanitizeKeychainCommandFailure(error);
         }
     }
 

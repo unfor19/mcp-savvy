@@ -19,7 +19,7 @@ import {
     errorStatus,
     type RemoteTransportFactory,
 } from './remoteTransport.js';
-import type { StdioBridgeOptions, TokenProvider } from './types.js';
+import type { ReauthenticationDiagnosticEmitter, StdioBridgeOptions, TokenProvider } from './types.js';
 import {
     passThroughInterceptor,
     type ResponseInterceptor,
@@ -62,6 +62,7 @@ export class StdioBridge {
     private readonly remoteUrl: string;
     private readonly getAccessToken: TokenProvider;
     private readonly logger: Logger | undefined;
+    private readonly diagnostics: ReauthenticationDiagnosticEmitter | undefined;
     private readonly maxReauthAttempts: number;
     private readonly stdioFactory: StdioTransportFactory;
     private readonly remoteFactory: RemoteTransportFactory;
@@ -78,6 +79,7 @@ export class StdioBridge {
         this.remoteUrl = opts.remoteUrl;
         this.getAccessToken = opts.getAccessToken;
         this.logger = opts.logger;
+        this.diagnostics = opts.diagnostics;
         this.maxReauthAttempts = opts.maxReauthAttempts ?? DEFAULT_MAX_REAUTH;
         this.stdioFactory = opts.stdioTransport ?? (() => new StdioServerTransport());
         this.remoteFactory =
@@ -115,9 +117,8 @@ export class StdioBridge {
         const token = await this.getAccessToken(input);
         const remote = this.remoteFactory(token);
         remote.onclose = () => {
-            // If the host is still up, treat unsolicited remote close as
-            // a transient failure: cycle through one re-auth attempt.
-            if (!this.closed) this.handleRemoteClose();
+            // Only the currently owned transport may trigger recovery.
+            if (!this.closed && this.remote === remote) this.handleRemoteClose();
         };
         remote.onerror = (err) => this.handleRemoteError(err);
         remote.onmessage = (msg) => this.forwardToHost(msg as JSONRPCMessage);
@@ -223,11 +224,19 @@ export class StdioBridge {
         const status = errorStatus(err);
         if (status === 401 && this.reauthAttempts < this.maxReauthAttempts) {
             this.reauthAttempts += 1;
-            this.logger?.warn(
-                `remote returned 401; reconnecting (attempt ${this.reauthAttempts})`,
+            const fields = {
+                consumedAttempts: this.reauthAttempts,
+                reauthenticationBudget: this.maxReauthAttempts,
+            };
+            this.diagnostics?.reauthentication(
+                fields.consumedAttempts,
+                fields.reauthenticationBudget,
             );
+            this.logger?.warn('remote returned 401; reconnecting', fields);
             try {
-                await this.remote?.close();
+                const remote = this.remote;
+                this.remote = null;
+                await remote?.close();
                 await this.connectRemote({ forceRefresh: true });
                 return;
             } catch (reconnectErr) {
@@ -235,7 +244,19 @@ export class StdioBridge {
                 return;
             }
         }
-        this.logger?.error(`remote error: ${err.message}`);
+        if (status === 401) {
+            const fields = {
+                consumedAttempts: this.reauthAttempts,
+                reauthenticationBudget: this.maxReauthAttempts,
+            };
+            this.diagnostics?.reauthentication(
+                fields.consumedAttempts,
+                fields.reauthenticationBudget,
+            );
+            this.logger?.error('remote returned 401; reauth budget exhausted', fields);
+        } else {
+            this.logger?.error(`remote error: ${err.message}`);
+        }
         await this.failHost(
             err instanceof AuthError || err instanceof McpSavvyError
                 ? err

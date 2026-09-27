@@ -15,11 +15,50 @@ import {
     type CallbackPageKind,
 } from '@mcp-savvy/server';
 
-/** Bind the listener to loopback. Security-critical: 127.0.0.1 only. */
-export function listenOnLoopback(server: Server, port: number): Promise<void> {
+/** Delay between callback-port acquisition attempts while another flow owns it. */
+const CALLBACK_BIND_RETRY_MS = 50;
+
+/** Bind the listener to loopback, waiting for an active flow to release the port. */
+export async function listenOnLoopback(
+    server: Server,
+    port: number,
+    timeoutMs?: number,
+): Promise<void> {
+    const deadline = timeoutMs === undefined ? undefined : Date.now() + timeoutMs;
+    while (true) {
+        try {
+            await listenOnce(server, port);
+            return;
+        } catch (err) {
+            const code = (err as NodeJS.ErrnoException | undefined)?.code;
+            if (code !== 'EADDRINUSE' || deadline === undefined) throw err;
+            const remainingMs = deadline - Date.now();
+            if (remainingMs <= 0) {
+                throw new AuthError(
+                    'CALLBACK_PORT_BUSY',
+                    `3LO callback port ${port} remained busy for ${timeoutMs}ms`,
+                );
+            }
+            await new Promise((resolve) =>
+                setTimeout(resolve, Math.min(CALLBACK_BIND_RETRY_MS, remainingMs)),
+            );
+        }
+    }
+}
+
+function listenOnce(server: Server, port: number): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(port, '127.0.0.1', () => resolve());
+        const onError = (err: Error): void => {
+            server.removeListener('listening', onListening);
+            reject(err);
+        };
+        const onListening = (): void => {
+            server.removeListener('error', onError);
+            resolve();
+        };
+        server.once('error', onError);
+        server.once('listening', onListening);
+        server.listen(port, '127.0.0.1');
     });
 }
 

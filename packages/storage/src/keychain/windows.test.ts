@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { WindowsCredentialManager } from './windows.js';
+import { KeychainReadError } from './types.js';
 import type { Runner } from '../runner.js';
 
 const SERVICE = 'mcp-savvy/test';
@@ -37,13 +38,31 @@ function recordingRunner(): RecordingRunner {
 }
 
 describe('isAvailable', () => {
-    it('is true on win32', () => {
+    it('is true on win32 when the reader module is available', () => {
+        const r = recordingRunner();
         const k = new WindowsCredentialManager({
             service: SERVICE,
             account: ACCOUNT,
             platform: 'win32',
+            runner: r.runner,
         });
         expect(k.isAvailable()).toBe(true);
+        expect(r.calls[0]?.cmd).toBe('powershell');
+        expect(r.calls[0]?.args.at(-1)).toContain('Import-Module CredentialManager');
+    });
+
+    it('is false on win32 when the reader module is unavailable', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => {
+            throw new Error('module unavailable');
+        });
+        const k = new WindowsCredentialManager({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'win32',
+            runner: r.runner,
+        });
+        expect(k.isAvailable()).toBe(false);
     });
 
     it('is false elsewhere', () => {
@@ -57,38 +76,67 @@ describe('isAvailable', () => {
 });
 
 describe('get', () => {
-    it('invokes powershell with CredentialManager and returns the trimmed value', () => {
+    it('invokes PowerShell with CredentialManager and returns the value', () => {
         const r = recordingRunner();
-        r.setRunImpl(() => 'hunter2\n');
+        r.setRunImpl(() => '{"status":"found","value":"hunter2"}\n');
         const k = new WindowsCredentialManager({
             service: SERVICE,
             account: ACCOUNT,
             platform: 'win32',
             runner: r.runner,
         });
-        expect(k.get()).toBe('hunter2');
+        expect(k.get()).toEqual({ status: 'found', value: 'hunter2' });
         expect(r.calls[0]?.cmd).toBe('powershell');
-        const script = r.calls[0]?.args[2] as string;
+        const script = r.calls[0]?.args.at(-1) as string;
         expect(script).toContain('CredentialManager');
         expect(script).toContain(SERVICE);
+        expect(script).toContain("status = 'missing'");
+        expect(script).toContain("status = 'unreadable-local-entry'");
+        expect(script).toContain("category = 'permission-denied'");
+        expect(script).toContain("category = 'integrity-failure'");
     });
 
-    it('returns null when the value is empty', () => {
+    it('maps the documented absent result to missing', () => {
         const r = recordingRunner();
-        r.setRunImpl(() => '   \n');
+        r.setRunImpl(() => '{"status":"missing"}');
         const k = new WindowsCredentialManager({
             service: SERVICE,
             account: ACCOUNT,
             platform: 'win32',
             runner: r.runner,
         });
-        expect(k.get()).toBeNull();
+        expect(k.get()).toEqual({ status: 'missing' });
     });
 
-    it('returns null when powershell errors (module missing)', () => {
+    it('maps a retrieved but undecodable entry to unreadable', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => '{"status":"unreadable-local-entry"}');
+        const k = new WindowsCredentialManager({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'win32',
+            runner: r.runner,
+        });
+        expect(k.get()).toEqual({ status: 'unreadable-local-entry' });
+    });
+
+    it('fails closed when the CredentialManager module cannot be invoked', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => '{"status":"error","category":"invocation-failure"}');
+        const k = new WindowsCredentialManager({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'win32',
+            runner: r.runner,
+        });
+        expect(() => k.get()).toThrowError(KeychainReadError);
+    });
+
+    it('does not disclose raw command error payloads', () => {
+        const rawPayload = 'raw-secret-error-payload';
         const r = recordingRunner();
         r.setRunImpl(() => {
-            throw new Error('module not found');
+            throw new Error(rawPayload);
         });
         const k = new WindowsCredentialManager({
             service: SERVICE,
@@ -96,11 +144,18 @@ describe('get', () => {
             platform: 'win32',
             runner: r.runner,
         });
-        expect(k.get()).toBeNull();
+        try {
+            k.get();
+            throw new Error('expected keychain read failure');
+        } catch (error) {
+            expect(error).toBeInstanceOf(KeychainReadError);
+            expect(String(error)).not.toContain(rawPayload);
+        }
     });
 
     it('keeps PowerShell metacharacters inside the credential target literal', () => {
         const r = recordingRunner();
+        r.setRunImpl(() => '{"status":"missing"}');
         const service = "mcp-savvy/x'; Start-Process calc; #`$()\nnext";
         const k = new WindowsCredentialManager({
             service,
@@ -109,10 +164,10 @@ describe('get', () => {
             runner: r.runner,
         });
 
-        expect(k.get()).toBeNull();
-        const script = r.calls[0]?.args[2] as string;
-        expect(script).toContain("-Target 'mcp-savvy/x''; Start-Process calc; #`$()\nnext'");
-        expect(script).not.toContain("-Target 'mcp-savvy/x'; Start-Process");
+        expect(k.get()).toEqual({ status: 'missing' });
+        const script = r.calls[0]?.args.at(-1) as string;
+        expect(script).toContain("$target = 'mcp-savvy/x''; Start-Process calc; #`$()\nnext';");
+        expect(script).not.toContain("$target = 'mcp-savvy/x'; Start-Process");
     });
 });
 

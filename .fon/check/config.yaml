@@ -29,6 +29,9 @@ check_exceptions:
       # example file is narrower than collapsing both into a shared
       # helper that neither package would naturally depend on.
       - examples/chatgpt-app-mcp/server/audit.mjs
+      # The cross-process fixture intentionally implements AuthProvider and
+      # Transport method names while observing their real production seams.
+      - scripts/concurrent/auth/child.mjs
     skip_symbols: # TokenStore + KeychainBackend interface methods
       - get
       - set

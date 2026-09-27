@@ -7,15 +7,21 @@
  * or fire multiple browser tabs for the same `(issuer, clientId)`.
  *
  * The `forceRefresh: true` path used after a 401 from the remote
- * skips the cached access_token but still re-reads the store
- * *inside* the lock so a sibling that already refreshed is observed.
+ * skips the cached credential but still re-reads the store *inside*
+ * the lock so a sibling that already refreshed is observed.
  */
 
 import type { AuthorizeBrowser, Logger, TokenData } from '@mcp-savvy/core';
-import { AuthError, TokenStoreError } from '@mcp-savvy/core';
+import { AuthError, LockError, TokenStoreError } from '@mcp-savvy/core';
 import type { AuthProvider } from '@mcp-savvy/auth';
 import type { LockCoordinator, TokenStore } from '@mcp-savvy/storage';
 import type { CallbackServer } from '@mcp-savvy/server';
+import type {
+    AuthDiagnosticEmitter,
+    CredentialDecisionReason,
+    InteractiveSignInReason,
+    RefreshDecisionReason,
+} from './diagnostics.js';
 
 /** How long before the recorded expiry do we treat tokens as stale. */
 export const REFRESH_BUFFER_MS = 60_000;
@@ -27,15 +33,17 @@ export type { AuthorizeBrowser } from '@mcp-savvy/core';
 export interface TokenManagerOptions {
     auth: AuthProvider;
     store: TokenStore;
-    /**
-     * Builds a fresh callback server for each PKCE flow. We make a
-     * new instance per flow so a stale server from an aborted
-     * sign-in cannot capture the next code.
-     */
+    /** Builds a fresh callback server for each PKCE flow. */
     createCallbackServer(): CallbackServer;
     /** Called with the IdP authorize URL; defaults to `open` in CLI. */
     openBrowser?: AuthorizeBrowser;
     logger?: Logger;
+    /** Closed, secret-safe authentication decision sink. */
+    diagnostics?: AuthDiagnosticEmitter;
+    /** Prefer an available OIDC ID token for AgentCore bearer authentication. */
+    preferIdentityToken?: boolean;
+    /** Clock used for deterministic recorded-expiry classification. */
+    now?: () => number;
     /**
      * Cross-process mutex coordinating every token-store mutation.
      * Production wiring (`buildDeps`) always supplies one; in-package
@@ -56,16 +64,24 @@ interface LockScope {
     timeoutMs: number;
 }
 
-/**
- * Manages tokens for the bridge. Exposes `getAccessToken` matching
- * the bridge's `TokenProvider` signature.
- */
+/** Classify a stored credential using only its recorded expiry and the supplied time. */
+export function classifyCredential(tokens: TokenData, now: number): CredentialDecisionReason {
+    if (!Number.isFinite(tokens.expires_at)) return 'recorded-expiry-invalid';
+    return tokens.expires_at > now + REFRESH_BUFFER_MS
+        ? 'credential-fresh'
+        : 'credential-stale';
+}
+
+/** Manages cache → refresh → PKCE token acquisition for the bridge. */
 export class TokenManager {
     private readonly auth: AuthProvider;
     private readonly store: TokenStore;
     private readonly makeServer: () => CallbackServer;
     private readonly openBrowser?: AuthorizeBrowser;
     private readonly logger: Logger | undefined;
+    private readonly diagnostics: AuthDiagnosticEmitter | undefined;
+    private readonly preferIdentityToken: boolean;
+    private readonly now: () => number;
     private readonly lockScope: LockScope | undefined;
 
     constructor(opts: TokenManagerOptions) {
@@ -74,6 +90,9 @@ export class TokenManager {
         this.makeServer = opts.createCallbackServer;
         if (opts.openBrowser) this.openBrowser = opts.openBrowser;
         this.logger = opts.logger;
+        this.diagnostics = opts.diagnostics;
+        this.preferIdentityToken = opts.preferIdentityToken ?? false;
+        this.now = opts.now ?? Date.now;
         if (opts.lock !== undefined) {
             if (opts.namespace === undefined || opts.lockTimeoutMs === undefined) {
                 throw new Error(
@@ -89,25 +108,15 @@ export class TokenManager {
     }
 
     /**
-     * Return a valid access_token. With `forceRefresh: false` we
-     * use cached tokens when fresh; otherwise we refresh; otherwise
-     * we run PKCE. With `forceRefresh: true` we skip the cached
-     * access_token but still try the refresh_token first.
-     *
-     * The whole body runs under `lock.withLock` so concurrent
-     * processes cannot duplicate PKCE or invalidate each other's
-     * rotating refresh tokens. A `LockError('LOCK_ACQUISITION_TIMEOUT')`
-     * from the wrapper propagates directly with no store mutation.
+     * Return a valid bearer token under the namespace lock.
+     * AgentCore callers prefer an available ID token; generic OAuth
+     * callers and bundles without one use the access token.
      */
     async getAccessToken(input: { forceRefresh: boolean }): Promise<string> {
         return this.withLock(() => this.acquireUnderLock(input));
     }
 
-    /**
-     * Drop any cached tokens. Used by `--logout`. Wrapped in the
-     * lock so a get-then-clear interleaving from a sibling process
-     * cannot read tokens we have already decided to clear.
-     */
+    /** Drop cached tokens while holding the namespace lock. */
     async logout(): Promise<void> {
         await this.withLock(async () => {
             await this.store.clear();
@@ -118,35 +127,66 @@ export class TokenManager {
     private async withLock<T>(fn: () => Promise<T>): Promise<T> {
         const scope = this.lockScope;
         if (!scope) return fn();
-        return scope.coord.withLock(
-            { namespace: scope.namespace, timeoutMs: scope.timeoutMs },
-            () => fn(),
-        );
+        try {
+            return await scope.coord.withLock(
+                { namespace: scope.namespace, timeoutMs: scope.timeoutMs },
+                () => fn(),
+            );
+        } catch (err) {
+            if (err instanceof LockError && err.code === 'LOCK_ACQUISITION_TIMEOUT') {
+                this.diagnostics?.lockTimeout(scope.namespace, scope.timeoutMs);
+            }
+            throw err;
+        }
     }
 
     /** Cache → refresh → PKCE body executed inside the critical section. */
     private async acquireUnderLock(input: { forceRefresh: boolean }): Promise<string> {
-        // Re-read after acquiring so a sibling's just-written tokens are observed (Req 1.5).
+        // Re-read after acquiring so a sibling's just-written tokens are observed.
         const cached = await this.readStore();
-        if (!input.forceRefresh && isFresh(cached)) {
-            this.logger?.debug('using cached access token');
-            return cached.access_token;
-        }
-        if (cached?.refresh_token) {
-            try {
-                const refreshed = await this.auth.refresh(cached.refresh_token);
-                await this.writeStore(refreshed);
-                this.logger?.debug('refreshed access token');
-                return refreshed.access_token;
-            } catch (err) {
-                this.logger?.warn(
-                    `refresh failed, falling back to PKCE: ${(err as Error).message}`,
-                );
+        if (cached) {
+            const classification = classifyCredential(cached, this.now());
+            this.diagnostics?.credential(classification, Boolean(cached.refresh_token));
+            if (!input.forceRefresh && classification === 'credential-fresh') {
+                this.logger?.debug('using cached bearer token');
+                return this.selectBearer(cached);
             }
         }
+
+        const refreshOutcome = await this.tryRefresh(cached);
+        if ('tokens' in refreshOutcome) {
+            await this.writeStore(refreshOutcome.tokens);
+            this.diagnostics?.refresh('refresh-succeeded');
+            this.logger?.debug('refreshed bearer token');
+            return this.selectBearer(refreshOutcome.tokens);
+        }
+
+        this.diagnostics?.refresh(refreshOutcome.reason);
+        const exhaustedReason: InteractiveSignInReason = cached
+            ? refreshOutcome.reason
+            : 'credential-missing';
+        this.diagnostics?.interactiveSignIn(exhaustedReason);
         const tokens = await this.runPkce();
         await this.writeStore(tokens);
-        return tokens.access_token;
+        return this.selectBearer(tokens);
+    }
+
+    private selectBearer(tokens: TokenData): string {
+        return this.preferIdentityToken && tokens.id_token
+            ? tokens.id_token
+            : tokens.access_token;
+    }
+
+    /** Attempt refresh without allowing persistence failures to select PKCE. */
+    private async tryRefresh(
+        cached: TokenData | null,
+    ): Promise<{ tokens: TokenData } | { reason: RefreshDecisionReason }> {
+        if (!cached?.refresh_token) return { reason: 'refresh-unavailable' };
+        try {
+            return { tokens: await this.auth.refresh(cached.refresh_token) };
+        } catch (err) {
+            return { reason: classifyRefreshFailure(err) };
+        }
     }
 
     /** Read the store, wrapping non-TokenStoreError failures as `TOKEN_STORE_READ_FAILED`. */
@@ -184,27 +224,25 @@ export class TokenManager {
         await server.listen();
         try {
             this.logger?.info('opening browser for sign-in');
-            if (this.openBrowser) {
-                await this.openBrowser(prep.authorizeUrl);
-            }
+            if (this.openBrowser) await this.openBrowser(prep.authorizeUrl);
             const result = await server.awaitCallback({ state: prep.state });
-            const tokens = await this.auth.exchangeCode({
+            return await this.auth.exchangeCode({
                 code: result.code,
                 state: result.state,
                 codeVerifier: prep.codeVerifier,
                 redirectUri: prep.redirectUri,
             });
-            return tokens;
         } finally {
             await server.stop();
         }
     }
 }
 
-/** True if the cached bundle has more than the refresh buffer left. */
-function isFresh(tokens: TokenData | null): tokens is TokenData {
-    if (!tokens) return false;
-    return tokens.expires_at > Date.now() + REFRESH_BUFFER_MS;
+/** Categorize a refresh failure without exposing its message or response body. */
+function classifyRefreshFailure(err: unknown): RefreshDecisionReason {
+    return err instanceof AuthError && err.code === 'TOKEN_REFRESH_FAILED'
+        ? 'refresh-rejected'
+        : 'refresh-error';
 }
 
 /** Thrown when callers ask for tokens outside a valid flow. */

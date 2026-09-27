@@ -129,6 +129,35 @@ describe('LockCoordinator (example-based)', () => {
         }
     });
 
+    it('serializes unrelated same-process callers while allowing owned reentry', async () => {
+        const coord = new LockCoordinator({ dataDir });
+        const opts = { namespace: 'ns-context', timeoutMs: 5_000 };
+        let active = 0;
+        let overlap = false;
+        let releaseFirst: (() => void) | undefined;
+        const firstMayFinish = new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+        });
+
+        const first = coord.withLock(opts, async (outerHandle) => {
+            active += 1;
+            await coord.withLock(opts, async (innerHandle) => {
+                expect(innerHandle).toBe(outerHandle);
+            });
+            await firstMayFinish;
+            active -= 1;
+        });
+        await vi.waitFor(() => expect(active).toBe(1));
+        const second = coord.withLock(opts, async () => {
+            overlap = active > 0;
+        });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(overlap).toBe(false);
+        releaseFirst?.();
+        await Promise.all([first, second]);
+        expect(overlap).toBe(false);
+    });
+
     it('writes zero bytes to process.stdout during a full acquire-release cycle', async () => {
         // 2.5(d) — Requirement 9.5
         const writeSpy = vi

@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { MacOSKeychain } from './macos.js';
+import { KeychainReadError } from './types.js';
 import type { Runner } from '../runner.js';
 
 const SERVICE = 'mcp-savvy/test';
@@ -59,14 +60,14 @@ describe('isAvailable', () => {
 describe('get', () => {
     it('reads through Keychain Services without putting the value in argv', () => {
         const r = recordingRunner();
-        r.setRunImpl(() => 'secret-value\n');
+        r.setRunImpl(() => '{"status":"found","value":"secret-value"}\n');
         const k = new MacOSKeychain({
             service: SERVICE,
             account: ACCOUNT,
             platform: 'darwin',
             runner: r.runner,
         });
-        expect(k.get()).toBe('secret-value');
+        expect(k.get()).toEqual({ status: 'found', value: 'secret-value' });
         const call = r.calls[0];
         expect(call?.cmd).toBe('/usr/bin/osascript');
         expect(call?.args.slice(-3)).toEqual(['--', SERVICE, ACCOUNT]);
@@ -74,15 +75,42 @@ describe('get', () => {
         const scriptIndex = call?.args.indexOf('-e') ?? -1;
         const script = call?.args[scriptIndex + 1] ?? '';
         expect(script).toContain('SecItemCopyMatching');
-        expect(script).toContain('kSecReturnData');
-        expect(script).toContain('kSecMatchLimitOne');
+        expect(script).toContain('errSecItemNotFound');
+        expect(script).toContain('unreadable-local-entry');
+        expect(script).toContain('permission-denied');
+        expect(script).toContain('integrity-failure');
         expect(script).not.toContain('find-generic-password');
     });
 
-    it('returns null when the entry is absent (JXA throws)', () => {
+    it('maps the documented not-found result to missing', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => '{"status":"missing"}\n');
+        const k = new MacOSKeychain({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'darwin',
+            runner: r.runner,
+        });
+        expect(k.get()).toEqual({ status: 'missing' });
+    });
+
+    it('maps a successfully retrieved non-UTF-8 entry to unreadable', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => '{"status":"unreadable-local-entry"}\n');
+        const k = new MacOSKeychain({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'darwin',
+            runner: r.runner,
+        });
+        expect(k.get()).toEqual({ status: 'unreadable-local-entry' });
+    });
+
+    it('throws a sanitized fail-closed error for command failures', () => {
+        const rawPayload = 'raw-secret-error-payload';
         const r = recordingRunner();
         r.setRunImpl(() => {
-            throw new Error('not found');
+            throw new Error(rawPayload);
         });
         const k = new MacOSKeychain({
             service: SERVICE,
@@ -90,7 +118,13 @@ describe('get', () => {
             platform: 'darwin',
             runner: r.runner,
         });
-        expect(k.get()).toBeNull();
+        try {
+            k.get();
+            throw new Error('expected keychain read failure');
+        } catch (error) {
+            expect(error).toBeInstanceOf(KeychainReadError);
+            expect(String(error)).not.toContain(rawPayload);
+        }
     });
 });
 

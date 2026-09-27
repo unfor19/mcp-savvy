@@ -39,7 +39,16 @@ unchanged for the MCP host to handle.
 
 When a Gateway target or supported Runtime asks the user to authorize a resource,
 mcp-savvy opens the one-time URL, listens on localhost for the return, completes
-AgentCore's user/session binding, and retries the original tool once. It supports
+AgentCore's user/session binding, and retries the original tool once. AgentCore
+stores the completed resource credential and uses a provider refresh token when
+one is issued, so a new outer login for the same user, workload, provider, and
+scopes should not by itself trigger SAP consent again. A new consent flow is
+expected when no matching credential remains usable or the Runtime explicitly
+forces authentication.
+
+mcp-savvy prefers an available OIDC ID token as the AgentCore bearer and falls
+back to the access token; generic OAuth endpoints continue using access tokens.
+It supports
 Gateway `-32042` URL elicitations and the tested AWS for SAP Runtime
 `requires_user_action` result. If you change versions, reconnect the MCP server;
 do not refresh a consumed authorization URL.
@@ -263,19 +272,68 @@ npx -y mcp-savvy --force-login
 ```
 
 - `--logout` removes locally cached authentication for the current token
-  namespace. It does not necessarily revoke the provider-side token or browser
+  namespace. It fails rather than reporting success if a populated backend cannot
+  be cleared. It does not necessarily revoke the provider-side token or browser
   session.
 - `--force-login` clears that cached authentication and starts a fresh local
   OAuth flow. An existing identity-provider SSO cookie can still sign you in
   without showing the credential form.
 
 mcp-savvy automatically derives a stable token namespace from the OIDC issuer
-and client ID. Configurations with the same issuer and client ID normally share
-cached authentication. Ordinary users do not need to set a namespace. As an
-advanced option, `MCP_SAVVY_TOKEN_NAMESPACE` intentionally isolates credentials,
-for example to keep a demo separate from normal use.
+and client ID. Configurations with the same effective cache identity reuse
+persisted credentials across independent client processes, including after the
+process that signed in has exited. Each process still owns distinct stdio and
+remote MCP transports; credentials are the only shared state, and no daemon is
+required.
+
+The effective cache identity consists of the resolved token namespace, resolved
+absolute data directory, and operating-system user context. With the derived
+namespace, issuer or client-ID drift changes that identity. A nonblank
+`MCP_SAVVY_TOKEN_NAMESPACE` is authoritative, so issuer/client-ID drift changes
+their diagnostic component fingerprints but not the effective identity while
+the override, data directory, and OS user remain equal. Whitespace-only
+overrides use the derived namespace. Changing the namespace, data directory, or
+OS user isolates credentials and can cause another sign-in.
+
+Credential decisions run under the per-namespace lock: re-read the cache,
+reuse only when the recorded expiry is more than 60 seconds away, otherwise
+attempt refresh, then use browser PKCE if refresh is unavailable or fails. The
+replacement bundle is persisted before the lock is released. Startup uses only
+the recorded expiry—there is no token introspection or remote MCP probe.
+
+The OS keychain is preferred. A documented missing entry, locally retrieved but
+undecodable entry, or structurally invalid entry may fall back to the encrypted
+file. Permission, integrity/tampering, command-invocation, and unexpected
+operational keychain errors fail closed without reading that fallback. After a
+successful keychain write, mcp-savvy removes the superseded encrypted-file copy;
+failed keychain writes preserve and update the file fallback instead.
 
 ## Troubleshooting
+
+For authentication reuse problems, run the CLI with the same environment as the
+MCP entry:
+
+```sh
+MCP_SAVVY_DEBUG=1 MCP_SAVVY_LOG=json npx -y mcp-savvy
+npx -y mcp-savvy --print-env
+```
+
+Debug mode emits structured authentication decisions to stderr; JSON mode makes
+them easier to compare across processes. `--print-env` is read-only and reports
+the resolved namespace and data directory, one effective cache-identity
+fingerprint, issuer/client-ID/namespace/data-directory component fingerprints,
+and available/preferred token backends. Equal effective fingerprints mean the
+processes address the same namespace, data directory, and OS-user context. A
+nonblank namespace override deliberately keeps the effective fingerprint stable
+across issuer/client-ID drift; compare component fingerprints to detect that
+drift.
+
+Diagnostics contain stable reasons and fingerprints, never access, refresh, or
+identity tokens; complete client IDs; authorization URLs or codes; PKCE values;
+OAuth state; or callback correlation values. A remote 401 has a process-local
+default budget of one forced-refresh/reconnect attempt. If the replacement
+transport also receives 401, that process fails closed without another refresh
+or browser sign-in; sibling processes and their transports are unaffected.
 
 - **Browser ends at localhost with `ERR_CONNECTION_REFUSED`:** no listener owned
   that authorization flow. Confirm `MCP_SAVVY_COMPLETE_SESSION_URL` is set,

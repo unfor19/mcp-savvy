@@ -11,13 +11,16 @@
  * the parent verifies the child's exit metadata and then re-acquires
  * the lock as a sibling under the timing bound the property requires.
  *
- * This scaffold deliberately skips the full PKCE + IdP path the spec
- * mentions and exercises lock release in isolation — what Properties
- * 3 and 4 actually constrain. Run via `make test-concurrent` so the
- * workspace is built before the children try to import the dist.
+ * The companion fixture protocol drives the real storage, lock,
+ * TokenManager, diagnostics, and bridge seams with deterministic fake
+ * authorization/refresh/transport implementations. No live IdP or MCP
+ * endpoint is contacted. Run via `make test-concurrent` so workspace
+ * packages are built before child processes import their dist output.
  */
 
 import { spawn } from 'node:child_process';
+import { runAgentCoreSessionConcurrency } from './concurrent/agentcore-session.mjs';
+import { runAuthFixtureSuite } from './concurrent/auth/suite.mjs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
@@ -266,8 +269,14 @@ async function main() {
     await writeFile(holderPath, HOLDER_SCRIPT, 'utf8');
     const ctx = { dataDir, holderPath };
     process.stdout.write(`scaffold root: ${tmpRoot}\n`);
-    process.stdout.write('Property 3 (signal release):\n');
     try {
+        await runAuthFixtureSuite({
+            dataDir,
+            namespace: nextNamespace('auth-reuse'),
+        });
+        process.stdout.write('AgentCore session completion concurrency:\n');
+        await runAgentCoreSessionConcurrency({ tmpRoot, repoRoot: REPO_ROOT });
+        process.stdout.write('Property 3 (signal release):\n');
         for (const scenario of SIGNAL_SCENARIOS) {
             await runSignalScenario(scenario, ctx);
             // Small idle gap so back-to-back spawns don't race the lock fd.

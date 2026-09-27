@@ -1,6 +1,6 @@
 {
     "name": "mcp-savvy",
-    "version": "0.1.5",
+    "version": "0.2.0",
     "description": "Stdio MCP bridge for protected MCP servers — drop-in for npx -y mcp-savvy.",
     "license": "MIT",
     "homepage": "https://github.com/unfor19/mcp-savvy#readme",
@@ -53,7 +53,7 @@
     "scripts": {
         "build": "tsup && chmod +x dist/cli.cjs",
         "build:tsc": "tsc && chmod +x dist/cli.js",
-        "clean": "rm -rf dist",
+        "clean": "rm -rf dist test-dist",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {

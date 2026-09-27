@@ -18,6 +18,7 @@ export type McpSavvyErrorCode =
     | 'TOKEN_REFRESH_FAILED'
     | 'TOKEN_STORE_READ_FAILED'
     | 'TOKEN_STORE_WRITE_FAILED'
+    | 'TOKEN_STORE_CLEAR_FAILED'
     | 'CALLBACK_PORT_BUSY'
     | 'BRIDGE_TRANSPORT_ERROR'
     | 'UNAUTHORIZED'
@@ -70,7 +71,7 @@ export class AuthError extends McpSavvyError {
 export class TokenStoreError extends McpSavvyError {
     override readonly name: string = 'TokenStoreError';
     constructor(
-        code: 'TOKEN_STORE_READ_FAILED' | 'TOKEN_STORE_WRITE_FAILED',
+        code: 'TOKEN_STORE_READ_FAILED' | 'TOKEN_STORE_WRITE_FAILED' | 'TOKEN_STORE_CLEAR_FAILED',
         message: string,
         cause?: unknown,
     ) {

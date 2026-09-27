@@ -14,8 +14,8 @@ with:
 
 - A description of the issue
 - Steps to reproduce
-- The version (`npx -y mcp-savvy --print-env` — the client ID is
-  redacted)
+- Resolved environment metadata (`npx -y mcp-savvy --print-env` — the
+  client ID is represented only by a deterministic component fingerprint)
 
 We'll acknowledge within 72 hours and aim for a fix within 14 days
 for high-severity reports.
@@ -69,7 +69,9 @@ The second callback leg is separate from OIDC/PKCE sign-in. When AgentCore
 returns a resource-authorization URL, mcp-savvy:
 
 - validates HTTPS and the expected PAR-style `request_uri`;
-- binds `127.0.0.1:33424` before opening the browser;
+- waits for exclusive ownership of `127.0.0.1:33424` before opening the browser;
+- prefers an available OIDC ID token for AgentCore inbound authentication and
+  falls back to the access token;
 - accepts only `GET /oauth2/callback`;
 - requires `session_id` to exactly equal the one-time `request_uri`;
 - sends `{sessionUri}` plus the current Bearer JWT to the configured HTTPS
@@ -106,13 +108,22 @@ HTML-escaped before reaching the success or error page — see
 
 ### Sensitive logging
 
-Authorization URLs and callback correlation values are passed only
-to the browser and protocol handlers, not diagnostic logs. The
-complete-session API records structured outcomes using truncated
-SHA-256 fingerprints for correlation; it does not log bearer tokens,
-raw subjects, session URIs, or upstream error messages. The repository
-secret scanner likewise reports only the file, source, and finding
-kind, never bytes from the matched value.
+Routine authentication decisions are available only in debug logging
+(`MCP_SAVVY_DEBUG=1`); `MCP_SAVVY_LOG=json` renders them as newline-delimited
+JSON on stderr. Records use allowlisted fields: stable decision reasons,
+backend names, the resolved namespace/data directory, and deterministic
+effective/component fingerprints. `--print-env` exposes the same safe identity
+and backend metadata without reading credentials, refreshing, contacting the
+remote MCP service, or launching a browser.
+
+These diagnostics never contain access, refresh, or identity tokens; complete
+client IDs; authorization URLs or codes; PKCE verifiers; OAuth state; or
+callback correlation values. Authorization URLs and callback correlation values
+are passed only to the browser and protocol handlers. The complete-session API
+records structured outcomes using truncated SHA-256 fingerprints for
+correlation; it does not log bearer tokens, raw subjects, session URIs, or
+upstream error messages. The repository secret scanner likewise reports only
+the file, source, and finding kind, never bytes from the matched value.
 
 ### Token storage
 
@@ -127,24 +138,55 @@ We use the OS-native keychain when available:
   [`secret-tool`](https://gnome.pages.gitlab.gnome.org/libsecret/secret-tool.1.html)
   (libsecret, GNOME Keyring / KWallet)
 
-We **shell out** to these binaries rather than using a native Node
-module like [`keytar`](https://github.com/atom/node-keytar).
-`keytar` is unmaintained as of [its archival in 2023](https://github.com/atom/node-keytar/issues/418)
-and pulls `node-gyp` which makes `npx mcp-savvy` painful to install.
-Shelling out is portable, install-free, and the binaries are
-already on the box.
+We **shell out** rather than using a native Node module like
+[`keytar`](https://github.com/atom/node-keytar). `keytar` is unmaintained as of
+[its archival in 2023](https://github.com/atom/node-keytar/issues/418) and pulls
+`node-gyp`. Backend availability is probed before selection: Windows requires
+the PowerShell `CredentialManager` module and Linux requires `secret-tool`. If
+the required reader is unavailable, mcp-savvy selects encrypted-file storage
+instead of writing a keychain entry it cannot later read.
 
 #### Encrypted-file fallback
 
 When no keychain is available, tokens are AES-256-CBC encrypted with
 a key derived from machine-bound material via
 [`scrypt`](https://nodejs.org/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback).
-This is **defense in depth**, not a security boundary against a
-local attacker — see "Out of scope" below.
+When a keychain is available, fallback is allowed only for its documented
+not-found result, a locally retrieved but undecodable entry, or a decoded entry
+that fails the existing token-bundle shape validation. Permission denial,
+integrity/tampering indications, command invocation failures, and unexpected
+operational errors fail closed without reading the encrypted file; they are not
+treated as evidence that the keychain is empty.
 
-The token namespace defaults to a slug of the issuer host plus the
-first 8 chars of `sha256(clientId)`, so two protected MCPs on the
-same machine never share a keychain entry.
+A successful keychain replacement removes the superseded encrypted-file copy
+only after persistence succeeds. If keychain persistence fails, mcp-savvy
+preserves and writes the encrypted fallback. If neither backend can persist the
+replacement, authentication fails rather than claiming success. The encrypted
+file is **defense in depth**, not a security boundary against a local attacker —
+see "Out of scope" below.
+
+The effective cache identity combines the resolved token namespace, resolved
+absolute data directory, and OS-user context. The default namespace is a slug of
+the issuer host plus the first 8 chars of `sha256(clientId)`. A nonblank explicit
+namespace override is authoritative: issuer/client-ID drift remains visible in
+component fingerprints but does not change the effective identity while the
+override, data directory, and OS user remain equal. Namespace, data-directory,
+or user drift isolates the credentials.
+
+### Cross-process credential coordination
+
+Processes never share a live MCP transport or require a daemon. They coordinate
+only credential decisions through the per-namespace filesystem lock. Cache
+read, recorded-expiry classification, refresh, PKCE selection, and persistence
+occur inside that lock; waiters re-read after acquiring it. A token is reusable
+only when its recorded expiry is strictly more than 60 seconds away. Startup
+uses no token introspection or remote MCP probe. A lock timeout fails without a
+credential read, mutation, refresh, or browser launch.
+
+A remote 401 consumes the current bridge's retry budget, which defaults to one
+forced-refresh/reconnect attempt. Exhaustion closes that process's transport
+without another token request or interactive sign-in and does not alter sibling
+process transports.
 
 ### PKCE
 

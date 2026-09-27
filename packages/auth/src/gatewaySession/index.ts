@@ -126,7 +126,9 @@ export async function completeGatewaySession(
     const brandName = input.brandName;
 
     const server = createServer();
-    await listenOnLoopback(server, port);
+    const startedAt = Date.now();
+    await listenOnLoopback(server, port, timeoutMs);
+    const callbackTimeoutMs = Math.max(1, timeoutMs - (Date.now() - startedAt));
     const boundPort = (server.address() as AddressInfo).port;
     logger?.debug(`3LO callback listening on 127.0.0.1:${boundPort}${path}`);
 
@@ -137,7 +139,7 @@ export async function completeGatewaySession(
         // attached `.catch(...)` here purely to silence Node.js's
         // "rejected without handler" warning — the original
         // rejection is still observed downstream when we await.
-        const sessionUriPromise = awaitSessionUri(server, path, timeoutMs, brandName, async (uri) => {
+        const sessionUriPromise = awaitSessionUri(server, path, callbackTimeoutMs, brandName, async (uri) => {
             if (uri !== expectedSessionUri) return false;
             return postCompleteSession({
                 endpoint: input.completeSessionEndpoint,

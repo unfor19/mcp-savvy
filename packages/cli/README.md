@@ -48,9 +48,11 @@ flows such as AWS for SAP `USER_FEDERATION`. It enables the second loopback
 listener, authenticated session completion, and one automatic retry. Omit it
 for backends that never return such challenges.
 
-First run opens a browser tab for sign-in; the token caches in your OS
-keychain. Subsequent runs are silent until refresh expires. Every
-`MCP_SAVVY_*` var is documented in
+First run opens a browser tab for sign-in and persists the token bundle in the
+OS keychain or encrypted-file fallback. Independent later processes with the
+same effective cache identity reuse or refresh it—even after the writer exits—
+while retaining separate stdio and remote MCP transports. No daemon is required.
+Every `MCP_SAVVY_*` variable is documented in
 [`.env.example`](https://github.com/unfor19/mcp-savvy/blob/main/.env.example).
 
 ## Tool modes
@@ -75,8 +77,50 @@ Full comparison and wire details in
 
 - `--login` — sign in only when cached credentials cannot be reused or refreshed
 - `--force-login` — unconditional PKCE, clears cached tokens first
-- `--logout` — clear cached tokens
-- `--print-env` — print resolved config (secrets redacted)
+- `--logout` — clear cached tokens and fail if any populated backend cannot be cleared
+- `--print-env` — print resolved, secret-safe cache identity and backend config
+  without reading credentials or launching authentication
+
+## Authentication reuse and troubleshooting
+
+The effective cache identity combines the resolved namespace, resolved absolute
+data directory, and OS-user context. The default namespace derives from issuer
+and client ID. A nonblank `MCP_SAVVY_TOKEN_NAMESPACE` override is authoritative:
+issuer/client-ID changes appear in component fingerprints but do not change the
+effective identity while the override, data directory, and OS user remain equal.
+Whitespace-only overrides use the derived namespace. Namespace,
+data-directory, or OS-user drift isolates credentials and can explain repeated
+sign-in.
+
+Under the per-namespace cross-process lock, mcp-savvy re-reads storage, reuses a
+credential only if its recorded expiry is more than 60 seconds away, attempts
+refresh otherwise, then starts browser PKCE if refresh is unavailable or fails.
+It persists a replacement before releasing the lock. Startup performs no token
+introspection or remote MCP probe.
+
+Keychain reads fall back to the encrypted file only for documented missing,
+locally undecodable, or structurally invalid entries. Permission,
+integrity/tampering, command-invocation, and unexpected operational errors fail
+closed without consulting the file. A successful keychain write removes the
+superseded file only afterward; a failed keychain write preserves the file
+fallback.
+
+Use the same environment as the MCP entry:
+
+```sh
+MCP_SAVVY_DEBUG=1 MCP_SAVVY_LOG=json npx -y mcp-savvy
+npx -y mcp-savvy --print-env
+```
+
+Debug decisions go to stderr. `--print-env` reports the resolved namespace/data
+directory, effective and issuer/client-ID/namespace/data-directory fingerprints,
+and available/preferred backends. Diagnostics include stable reasons and
+fingerprints but never tokens, complete client IDs, authorization URLs/codes,
+PKCE values, OAuth state, or callback correlation values.
+
+A remote 401 gets one forced-refresh/reconnect attempt by default. If the new
+transport also receives 401, the current process fails without another token
+request or browser sign-in; other processes retain their independent transports.
 
 ## Documentation
 

@@ -6,7 +6,14 @@
  */
 
 import { platform } from 'node:os';
-import type { KeychainBackend, KeychainBackendOptions } from './types.js';
+import {
+    KeychainReadError,
+    decodeKeychainCommandResult,
+    sanitizeKeychainCommandFailure,
+    type KeychainBackend,
+    type KeychainBackendOptions,
+    type KeychainReadResult,
+} from './types.js';
 import { nodeRunner, type Runner } from '../runner.js';
 
 const GET_PASSWORD_JXA = String.raw`
@@ -30,13 +37,26 @@ function run(argv) {
     query.setObjectForKey(matchLimitOne, matchLimit);
     const result = Ref();
     const status = $.SecItemCopyMatching(query, result);
+    if (status === Number($.errSecItemNotFound)) {
+        return JSON.stringify({ status: 'missing' });
+    }
     if (status !== Number($.errSecSuccess)) {
-        throw new Error('Keychain read failed with status ' + status);
+        let category = 'operational-failure';
+        if (
+            status === Number($.errSecAuthFailed) ||
+            status === Number($.errSecInteractionNotAllowed) ||
+            status === Number($.errSecUserCanceled)
+        ) {
+            category = 'permission-denied';
+        } else if (status === Number($.errSecDecode)) {
+            category = 'integrity-failure';
+        }
+        return JSON.stringify({ status: 'error', category: category });
     }
     const data = ObjC.castRefToObject(result[0]);
     const text = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding);
-    if (!text) throw new Error('Keychain value is not valid UTF-8');
-    return ObjC.unwrap(text);
+    if (!text) return JSON.stringify({ status: 'unreadable-local-entry' });
+    return JSON.stringify({ status: 'found', value: ObjC.unwrap(text) });
 }
 `;
 
@@ -101,8 +121,8 @@ export class MacOSKeychain implements KeychainBackend {
         return this.currentPlatform === 'darwin';
     }
 
-    /** Read the password for our service+account, or null if not set. */
-    get(): string | null {
+    /** Read and classify the local Keychain Services entry. */
+    get(): KeychainReadResult {
         try {
             const out = this.runner.run('/usr/bin/osascript', [
                 '-l',
@@ -113,9 +133,10 @@ export class MacOSKeychain implements KeychainBackend {
                 this.service,
                 this.account,
             ]);
-            return out.replace(/\n$/, '');
-        } catch {
-            return null;
+            return decodeKeychainCommandResult(out.replace(/\n$/, ''));
+        } catch (error) {
+            if (error instanceof KeychainReadError) throw error;
+            throw sanitizeKeychainCommandFailure(error);
         }
     }
 

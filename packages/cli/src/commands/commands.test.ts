@@ -3,7 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { runBridge, login, forceLogin, logout, printEnv, redact, type CommandDeps } from './index.js';
+import type { Logger } from '@mcp-savvy/core';
+import { runBridge, login, forceLogin, logout, printEnv, type CommandDeps } from './index.js';
 import {
     tokenData,
     memoryStore,
@@ -186,32 +187,56 @@ describe('logout', () => {
 });
 
 describe('printEnv', () => {
-    it('emits the resolved config without leaking the full client_id', async () => {
-        const logger = fakeLogger();
-        const cb = fakeCallbackServer({ result: { code: '', state: '' } });
+    it('reports effective identity and backend metadata without authentication side effects', async () => {
+        const records: { message: string; fields?: Record<string, unknown> }[] = [];
+        const logger: Logger = {
+            debug: () => undefined,
+            info: (message, fields) => records.push({ message, ...(fields ? { fields } : {}) }),
+            warn: () => undefined,
+            error: () => undefined,
+            child: () => logger,
+        };
+        const noSideEffect = (): never => {
+            throw new Error('print-env must not perform authentication side effects');
+        };
         const deps: CommandDeps = {
-            auth: scriptedAuth(),
-            store: memoryStore(),
-            createCallbackServer: () => cb.server,
-            createBridge: () => {
-                throw new Error('bridge should not be built for --print-env');
+            auth: {
+                prepareAuthorize: noSideEffect,
+                exchangeCode: noSideEffect,
+                refresh: noSideEffect,
             },
+            store: {
+                get: noSideEffect,
+                set: noSideEffect,
+                clear: noSideEffect,
+            },
+            createCallbackServer: noSideEffect,
+            createBridge: noSideEffect,
             logger,
             ...LOCK_DEPS,
+            lock: { withLock: noSideEffect } as unknown as CommandDeps['lock'],
         };
-        const code = await printEnv(CONFIG, deps);
+
+        const code = await printEnv(
+            { ...CONFIG, clientId: 'complete-client-id-must-not-appear' },
+            deps,
+        );
+
         expect(code).toBe(0);
-        expect(logger.records[0]).toMatchObject({ level: 'info', msg: 'resolved config' });
-    });
-});
-
-describe('redact', () => {
-    it('returns *** for short values', () => {
-        expect(redact('abc')).toBe('***');
-        expect(redact('12345678')).toBe('***');
-    });
-
-    it('shows first and last 4 chars for longer values', () => {
-        expect(redact('abcdefghij')).toBe('abcd...ghij');
+        expect(records).toHaveLength(1);
+        expect(records[0]).toMatchObject({
+            message: 'resolved config',
+            fields: {
+                namespace: LOCK_DEPS.effectiveIdentity.namespace,
+                dataDir: LOCK_DEPS.effectiveIdentity.dataDir,
+                effectiveCacheIdentityFingerprint: LOCK_DEPS.effectiveIdentity.fingerprint,
+                componentFingerprints: LOCK_DEPS.effectiveIdentity.componentFingerprints,
+                availableBackends: LOCK_DEPS.backendMetadata.available,
+                preferredBackend: LOCK_DEPS.backendMetadata.preferred,
+            },
+        });
+        expect(JSON.stringify(records[0])).not.toContain('complete-client-id-must-not-appear');
+        expect(records[0]?.fields).not.toHaveProperty('clientId');
+        expect(records[0]?.fields).not.toHaveProperty('tokenNamespace');
     });
 });
