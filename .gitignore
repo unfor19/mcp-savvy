@@ -15,12 +15,14 @@
 !.vscode/
 !.fon/
 
-# fon's own .gitignore inside .fon/ — auto-generated, do not commit
+# fon's generated local work state — never commit
 .fon/.gitignore
+.fon/workdir/
 
 # Build / install artifacts
 node_modules/
 dist/
+test-dist/
 dist-lambdas/
 coverage/
 *.log

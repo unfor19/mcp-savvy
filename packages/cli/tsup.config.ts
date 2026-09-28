@@ -59,4 +59,22 @@ export default defineConfig([
             options.conditions = ['import', 'node'];
         },
     },
+    {
+        // Non-exported seam used by scripts/test-concurrent.mjs. Keep it
+        // outside publishable dist while preserving workspace error identity.
+        entry: { 'token-manager': 'src/tokens/index.ts' },
+        format: ['esm'],
+        outDir: 'test-dist',
+        target: 'node20',
+        platform: 'node',
+        bundle: true,
+        external: [
+            '@mcp-savvy/core',
+            '@mcp-savvy/auth',
+            '@mcp-savvy/storage',
+            '@mcp-savvy/server',
+        ],
+        clean: true,
+        dts: false,
+    },
 ]);

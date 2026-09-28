@@ -18,8 +18,8 @@ import {
     memoryStore,
     scriptedAuth,
     fakeCallbackServer,
-    fakeLockCoordinator,
     TEST_CONFIG,
+    TEST_LOCK_DEPS,
 } from '../testFixtures.js';
 
 /** No-op logger; the property doesn't assert on log records. */
@@ -76,9 +76,8 @@ describe('commands (property-based)', () => {
                             browserOpens += 1;
                         },
                         logger: nullLogger(),
-                        lock: fakeLockCoordinator(),
+                        ...TEST_LOCK_DEPS,
                         namespace: 'pbt-ns',
-                        lockTimeoutMs: 300_000,
                     };
 
                     const code = await login(TEST_CONFIG, deps);

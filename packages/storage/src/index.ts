@@ -5,7 +5,14 @@
 export type { TokenStore, TokenStoreOptions } from './types.js';
 export { EncryptedFileTokenStore } from './encryptedFile.js';
 export { AutoTokenStore, resolveTokenStore } from './auto.js';
-export type { AutoTokenStoreInternalOptions } from './auto.js';
+export type {
+    AutoTokenStoreInternalOptions,
+    BackendReadEvent,
+    BackendReadObserver,
+    CredentialReadReason,
+    TokenStoreBackendMetadata,
+} from './auto.js';
+export { isTokenData } from './tokenValidation.js';
 export { nodeRunner } from './runner.js';
 export type { Runner, RunResult } from './runner.js';
 export {
@@ -17,8 +24,11 @@ export {
 export type {
     KeychainBackend,
     KeychainBackendOptions,
+    KeychainReadFailureCategory,
+    KeychainReadResult,
     SelectKeychainOverrides,
 } from './keychain/index.js';
+export { KeychainReadError } from './keychain/index.js';
 /** Cross-process mutex coordinator for token-store mutations. */
 export { LockCoordinator } from './lock/index.js';
 /** Public types for `LockCoordinator.acquire` / `release` / construction. */

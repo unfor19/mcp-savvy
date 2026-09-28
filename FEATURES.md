@@ -10,10 +10,11 @@ transports. The bridge speaks JSON-RPC over stdio to your MCP host
 (Kiro, Claude Code, Codex, anything that follows the spec) and
 Streamable HTTP to your remote backend.
 
-A 401 from the remote drops the cached token, refreshes via the
-OIDC provider, and reconnects up to `maxReauthAttempts` times before
-failing the host transport. No manual reconnect, no host-side
-retry logic.
+A 401 from the remote consumes a process-local retry budget, requests a token
+with forced refresh under the namespace lock, and reconnects that bridge with a
+new remote transport. The default budget is one attempt. A repeated 401 after
+that fails the current host transport without another token request or browser
+sign-in; sibling processes keep their independently owned transports.
 
 ## OIDC + PKCE sign-in
 
@@ -30,6 +31,40 @@ in your default browser. Works with any OIDC-compliant IdP:
 
 The `cognito` preset just composes the issuer URL from a region +
 user-pool ID. Set `MCP_SAVVY_PROVIDER=oidc` for anything else.
+
+### Durable reuse across client processes
+
+Independent mcp-savvy processes share persisted credentials, not live MCP
+connections. Each process owns its stdio and remote Streamable HTTP transports,
+and no daemon or long-lived coordinator is required. A later process can reuse
+a credential written by an exited process; concurrent processes coordinate on
+a per-namespace filesystem lock so one refresh or PKCE result can serve all
+waiters.
+
+The effective cache identity is the resolved namespace, resolved absolute data
+directory, and operating-system user context. The default namespace derives from
+the issuer plus client ID. If `MCP_SAVVY_TOKEN_NAMESPACE` is nonblank, it is
+authoritative: issuer and client-ID changes still change their component
+fingerprints, but do not change the effective identity while the override, data
+directory, and OS user remain equal. Whitespace-only overrides are ignored.
+Namespace, data-directory, or OS-user drift creates a different identity.
+
+Every authentication decision occurs while holding that namespace lock. Async
+ownership permits intentional nested use while unrelated callers in the same or
+different processes remain serialized. After acquiring it, the process re-reads
+storage, reuses a credential only when its recorded expiry is strictly more than
+60 seconds away, otherwise attempts refresh, and finally selects PKCE when refresh
+is missing or fails. Refreshed or
+new credentials are persisted before lock release. Startup does not introspect
+tokens or probe the remote MCP service.
+
+Use `MCP_SAVVY_DEBUG=1` for authentication decision records on stderr,
+`MCP_SAVVY_LOG=json` for newline-delimited JSON, and `--print-env` to compare
+resolved namespace/data directory, effective and component fingerprints, and
+available/preferred storage backends without authentication side effects. These
+diagnostics expose stable reasons and fingerprints, never tokens, complete
+client IDs, authorization URLs/codes, PKCE values, OAuth state, or callback
+correlation values.
 
 Each IdP's quirks (issuer shape, and which claim carries the client
 id — `azp` for Entra/Auth0/Keycloak, `cid` for Okta) are encoded in a
@@ -53,12 +88,16 @@ response shapes:
 When `MCP_SAVVY_COMPLETE_SESSION_URL` is configured, the bridge handles both:
 
 1. Correlates the authorization response to the original `tools/call`.
-2. Starts a one-shot listener on `127.0.0.1:33424` before opening the browser.
+2. Waits for exclusive ownership of the registered `127.0.0.1:33424` callback
+   port before opening the browser, so concurrent flows are serialized across
+   processes instead of losing one authorization response.
 3. Requires callback `session_id` to exactly equal the authorization URL's
    opaque `request_uri`.
 4. POSTs `{ sessionUri }` with the current user Bearer JWT to the configured
-   completion API. The API calls `CompleteResourceTokenAuth`; the token is not
-   duplicated in the JSON body.
+   completion API. For AgentCore endpoints, mcp-savvy prefers an available OIDC
+   ID token and falls back to the access token; generic OAuth endpoints retain
+   access-token behavior. The API calls `CompleteResourceTokenAuth`; the token is
+   not duplicated in the JSON body.
 5. Retries the original tool call once after successful binding.
 
 The dispatcher allows only one interceptor to own a request ID at a time, dropping
@@ -205,13 +244,21 @@ Native keychain via:
 - **Linux** — `secret-tool` (libsecret)
 
 We **shell out** to these binaries rather than using a native Node
-module. No `node-gyp`, no `keytar`, no install-time pain. When the
-keychain is unavailable, AES-256-CBC encrypted-file fallback with
-a key derived from machine-bound material via `scrypt`.
+module. No `node-gyp`, no `keytar`, no install-time pain. Reads prefer the
+keychain. Only a documented missing entry, a locally retrieved but undecodable
+entry, or a decoded but structurally invalid token bundle permits the encrypted
+file fallback. Permission, integrity/tampering, invocation, and unexpected
+operational failures fail closed without reading the fallback.
+
+When a replacement can be written to the keychain, mcp-savvy removes the
+superseded encrypted-file copy only after the keychain write succeeds. If the
+keychain write fails, it preserves and writes the encrypted fallback; if no
+backend can persist the replacement, authentication reports a storage failure.
 
 The token namespace defaults to a slug of the issuer host plus the
 first 8 chars of `sha256(clientId)`, so two protected MCPs on the
-same machine never share a keychain entry.
+same machine never share a keychain entry unless an explicit authoritative
+namespace override intentionally selects the same namespace.
 
 See [SECURITY.md](./SECURITY.md) for threat model details.
 

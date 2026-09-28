@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LinuxSecretService } from './linux.js';
+import { KeychainReadError } from './types.js';
 import type { Runner, RunResult } from '../runner.js';
 
 const SERVICE = 'mcp-savvy/test';
@@ -92,13 +93,13 @@ describe('get', () => {
             platform: 'linux',
             runner: r.runner,
         });
-        expect(k.get()).toBe('payload');
+        expect(k.get()).toEqual({ status: 'found', value: 'payload' });
         const lookup = r.runCalls.find((c) => c.args[0] === 'lookup');
         expect(lookup?.cmd).toBe('secret-tool');
         expect(lookup?.args).toEqual(['lookup', 'service', SERVICE, 'account', ACCOUNT]);
     });
 
-    it('returns null on empty output', () => {
+    it('returns a successful empty local entry for store-layer validation', () => {
         const r = recordingRunner();
         r.setRunImpl(() => '\n');
         const k = new LinuxSecretService({
@@ -107,13 +108,13 @@ describe('get', () => {
             platform: 'linux',
             runner: r.runner,
         });
-        expect(k.get()).toBeNull();
+        expect(k.get()).toEqual({ status: 'found', value: '' });
     });
 
-    it('returns null when secret-tool errors', () => {
+    it('maps only the documented empty-stderr exit to missing', () => {
         const r = recordingRunner();
         r.setRunImpl(() => {
-            throw new Error('locked');
+            throw { status: 1, stderr: '' };
         });
         const k = new LinuxSecretService({
             service: SERVICE,
@@ -121,7 +122,54 @@ describe('get', () => {
             platform: 'linux',
             runner: r.runner,
         });
-        expect(k.get()).toBeNull();
+        expect(k.get()).toEqual({ status: 'missing' });
+    });
+
+    it('maps invalid UTF-8 replacement output to unreadable', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => 'invalid-\uFFFD-entry');
+        const k = new LinuxSecretService({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'linux',
+            runner: r.runner,
+        });
+        expect(k.get()).toEqual({ status: 'unreadable-local-entry' });
+    });
+
+    it('fails closed for a nonzero operational error with stderr', () => {
+        const r = recordingRunner();
+        r.setRunImpl(() => {
+            throw { status: 1, stderr: 'collection locked' };
+        });
+        const k = new LinuxSecretService({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'linux',
+            runner: r.runner,
+        });
+        expect(() => k.get()).toThrowError(KeychainReadError);
+    });
+
+    it('does not disclose raw command error payloads', () => {
+        const rawPayload = 'raw-secret-error-payload';
+        const r = recordingRunner();
+        r.setRunImpl(() => {
+            throw new Error(rawPayload);
+        });
+        const k = new LinuxSecretService({
+            service: SERVICE,
+            account: ACCOUNT,
+            platform: 'linux',
+            runner: r.runner,
+        });
+        try {
+            k.get();
+            throw new Error('expected keychain read failure');
+        } catch (error) {
+            expect(error).toBeInstanceOf(KeychainReadError);
+            expect(String(error)).not.toContain(rawPayload);
+        }
     });
 });
 

@@ -93,6 +93,13 @@ describe('buildDeps', () => {
         expect(deps.auth).toBeDefined();
         expect(deps.store).toBeDefined();
         expect(deps.logger).toBeDefined();
+        expect(deps.effectiveIdentity).toMatchObject({
+            namespace: deps.namespace,
+            dataDir: path.resolve(SAMPLE_CONFIG.dataDir),
+        });
+        expect(deps.backendMetadata.available.length).toBeGreaterThan(0);
+        expect(deps.backendMetadata.preferred).toBe(deps.backendMetadata.available[0]);
+        expect(deps.diagnostics).toBeDefined();
     });
 
     it('selects CognitoProvider when provider=cognito', () => {
@@ -107,9 +114,35 @@ describe('buildDeps', () => {
 
     it('honors a custom token namespace', () => {
         const deps = buildDeps({ ...SAMPLE_CONFIG, tokenNamespace: 'my-ns' });
-        // Just confirm the deps build successfully — the namespace is
-        // baked into the store but not exposed.
-        expect(deps.store).toBeDefined();
+        expect(deps.namespace).toBe('my-ns');
+        expect(deps.effectiveIdentity.namespace).toBe('my-ns');
+    });
+
+    it('binds safe identity fields and emits initialization without the client ID', () => {
+        buildDeps({
+            ...SAMPLE_CONFIG,
+            clientId: 'complete-client-id-must-not-appear',
+            debug: true,
+        });
+        const written = stderrSpy.mock.calls.map((call) => String(call[0])).join('');
+        expect(written).toContain('auth.initialization');
+        expect(written).toContain('effectiveCacheIdentityFingerprint');
+        expect(written).toContain('availableBackends');
+        expect(written).not.toContain('complete-client-id-must-not-appear');
+    });
+
+    it.each([
+        'https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/example/invocations',
+        'https://gateway-id.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp',
+        'https://gateway-id.gateway.bedrock-agentcore.cn-north-1.amazonaws.com.cn/mcp',
+    ])('prefers identity tokens for AgentCore endpoint %s', (remoteUrl) => {
+        const deps = buildDeps({ ...SAMPLE_CONFIG, remoteUrl });
+        expect(deps.preferIdentityToken).toBe(true);
+    });
+
+    it('retains access-token preference for generic OAuth endpoints', () => {
+        const deps = buildDeps(SAMPLE_CONFIG);
+        expect(deps.preferIdentityToken).toBe(false);
     });
 
     it('builds a bridge without an interceptor when completeSessionUrl is unset', () => {

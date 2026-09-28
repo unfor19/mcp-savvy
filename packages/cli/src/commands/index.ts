@@ -7,13 +7,23 @@
  * each command without spawning a subprocess.
  */
 
-import type { Logger } from '@mcp-savvy/core';
+import { LockError, type Logger } from '@mcp-savvy/core';
 import type { AuthProvider } from '@mcp-savvy/auth';
-import type { LockCoordinator, TokenStore } from '@mcp-savvy/storage';
+import type {
+    LockCoordinator,
+    TokenStore,
+    TokenStoreBackendMetadata,
+} from '@mcp-savvy/storage';
 import type { CallbackServer } from '@mcp-savvy/server';
 import type { StdioBridge, TokenProvider } from '@mcp-savvy/bridge';
 import type { CliConfig } from '../env.js';
-import { REFRESH_BUFFER_MS, TokenManager, type AuthorizeBrowser } from '../tokens/index.js';
+import type { EffectiveCacheIdentity } from '../identity/index.js';
+import {
+    classifyCredential,
+    TokenManager,
+    type AuthDiagnosticEmitter,
+    type AuthorizeBrowser,
+} from '../tokens/index.js';
 
 /** Things commands need that aren't part of `CliConfig`. */
 export interface CommandDeps {
@@ -24,12 +34,20 @@ export interface CommandDeps {
     /** Build the bridge given the access-token provider. */
     createBridge(getAccessToken: TokenProvider): StdioBridge;
     logger: Logger;
+    /** Closed, secret-safe authentication decision sink. */
+    diagnostics: AuthDiagnosticEmitter;
+    /** Canonical identity shared by storage, locking, and diagnostics. */
+    effectiveIdentity: EffectiveCacheIdentity;
+    /** Available token backends and their deterministic precedence. */
+    backendMetadata: TokenStoreBackendMetadata;
     /** Single shared cross-process mutex for token-store mutations. */
     lock: LockCoordinator;
     /** Token Namespace shared by store, lock, and PKCE flows. */
     namespace: string;
     /** Per-acquisition lock timeout from `CliConfig.lockTimeoutMs`. */
     lockTimeoutMs: number;
+    /** Prefer OIDC ID tokens for AgentCore while retaining access-token fallback. */
+    preferIdentityToken: boolean;
 }
 
 /** Build a `TokenManager` from the production `CommandDeps`. */
@@ -40,10 +58,27 @@ function makeTokenManager(deps: CommandDeps): TokenManager {
         createCallbackServer: deps.createCallbackServer,
         ...(deps.openBrowser ? { openBrowser: deps.openBrowser } : {}),
         logger: deps.logger,
+        diagnostics: deps.diagnostics,
         lock: deps.lock,
         namespace: deps.namespace,
         lockTimeoutMs: deps.lockTimeoutMs,
+        preferIdentityToken: deps.preferIdentityToken,
     });
+}
+
+/** Run a CLI authentication command under the namespace lock with timeout diagnostics. */
+async function withCommandLock<T>(deps: CommandDeps, fn: () => Promise<T>): Promise<T> {
+    try {
+        return await deps.lock.withLock(
+            { namespace: deps.namespace, timeoutMs: deps.lockTimeoutMs },
+            fn,
+        );
+    } catch (err) {
+        if (err instanceof LockError && err.code === 'LOCK_ACQUISITION_TIMEOUT') {
+            deps.diagnostics.lockTimeout(deps.namespace, deps.lockTimeoutMs);
+        }
+        throw err;
+    }
 }
 
 /**
@@ -68,22 +103,23 @@ export async function runBridge(_config: CliConfig, deps: CommandDeps): Promise<
  */
 export async function login(_config: CliConfig, deps: CommandDeps): Promise<number> {
     const tokens = makeTokenManager(deps);
-    return deps.lock.withLock(
-        { namespace: deps.namespace, timeoutMs: deps.lockTimeoutMs },
-        async () => {
-            const cached = await deps.store.get();
-            const now = Date.now();
-            if (cached && cached.expires_at > now + REFRESH_BUFFER_MS) {
+    return withCommandLock(deps, async () => {
+        const cached = await deps.store.get();
+        const now = Date.now();
+        if (cached) {
+            const classification = classifyCredential(cached, now);
+            deps.diagnostics.credential(classification, Boolean(cached.refresh_token));
+            if (classification === 'credential-fresh') {
                 deps.logger.info('already signed in', {
                     remainingMs: cached.expires_at - now,
                 });
                 return 0;
             }
-            await tokens.getAccessToken({ forceRefresh: false });
-            deps.logger.info('signed in; tokens cached');
-            return 0;
-        },
-    );
+        }
+        await tokens.getAccessToken({ forceRefresh: false });
+        deps.logger.info('signed in; tokens cached');
+        return 0;
+    });
 }
 
 /**
@@ -95,15 +131,12 @@ export async function login(_config: CliConfig, deps: CommandDeps): Promise<numb
  */
 export async function forceLogin(_config: CliConfig, deps: CommandDeps): Promise<number> {
     const tokens = makeTokenManager(deps);
-    return deps.lock.withLock(
-        { namespace: deps.namespace, timeoutMs: deps.lockTimeoutMs },
-        async () => {
-            await deps.store.clear();
-            await tokens.getAccessToken({ forceRefresh: false });
-            deps.logger.info('signed in; tokens cached');
-            return 0;
-        },
-    );
+    return withCommandLock(deps, async () => {
+        await deps.store.clear();
+        await tokens.getAccessToken({ forceRefresh: false });
+        deps.logger.info('signed in; tokens cached');
+        return 0;
+    });
 }
 
 /** `--logout` — clear cached tokens and exit. */
@@ -114,18 +147,22 @@ export async function logout(_config: CliConfig, deps: CommandDeps): Promise<num
     return 0;
 }
 
-/** `--print-env` — echo the resolved config to stderr (no secrets). */
+/** `--print-env` — report resolved, secret-safe config without authentication side effects. */
 export async function printEnv(config: CliConfig, deps: CommandDeps): Promise<number> {
     const safe = {
         provider: config.provider,
         remoteUrl: config.remoteUrl,
         issuer: config.issuer,
-        clientId: redact(config.clientId),
         scopes: config.scopes,
         callbackHost: config.callbackHost,
         callbackPort: config.callbackPort,
         callbackPath: config.callbackPath,
-        tokenNamespace: config.tokenNamespace,
+        namespace: deps.effectiveIdentity.namespace,
+        dataDir: deps.effectiveIdentity.dataDir,
+        effectiveCacheIdentityFingerprint: deps.effectiveIdentity.fingerprint,
+        componentFingerprints: deps.effectiveIdentity.componentFingerprints,
+        availableBackends: deps.backendMetadata.available,
+        preferredBackend: deps.backendMetadata.preferred,
         brandName: config.brandName,
         completeSessionUrl: config.completeSessionUrl,
         toolMode: config.toolMode,
@@ -134,10 +171,4 @@ export async function printEnv(config: CliConfig, deps: CommandDeps): Promise<nu
     };
     deps.logger.info('resolved config', safe);
     return 0;
-}
-
-/** Show the first + last 4 chars of a value, mask the middle. */
-export function redact(value: string): string {
-    if (value.length <= 8) return '***';
-    return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }

@@ -26,9 +26,9 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { AuthError, McpSavvyError, type Logger } from '@mcp-savvy/core';
-import { StdioBridge } from './stdioBridge.js';
-import { BRIDGE_ERROR_CODES, type BridgeErrorCategory } from './bridgeErrors.js';
-import { fakeTransport, type FakeTransport, tick } from './testFixtures.js';
+import { StdioBridge } from '../stdioBridge.js';
+import { BRIDGE_ERROR_CODES, type BridgeErrorCategory } from '../bridgeErrors.js';
+import { fakeTransport, type FakeTransport, tick } from '../testFixtures.js';
 
 /** Synthetic JSON-RPC error frame shape produced by `flushPendingAsErrors`. */
 interface EmittedErrorFrame {

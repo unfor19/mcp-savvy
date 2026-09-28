@@ -92,6 +92,9 @@ function inspectPackReport(report, destination, isolatedRepo) {
         if (!files.has(required)) throw new Error(`packed artifact is missing ${required}`);
     }
     for (const file of files) {
+        if (file.startsWith('dist/internal/')) {
+            throw new Error(`packed artifact contains forbidden internal path ${file}`);
+        }
         if (!(file === 'package.json' || file === 'README.md' || file === 'LICENSE' || file.startsWith('dist/'))) {
             throw new Error(`packed artifact contains unexpected path ${file}`);
         }

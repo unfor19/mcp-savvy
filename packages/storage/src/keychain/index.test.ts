@@ -36,6 +36,14 @@ describe('selectKeychain', () => {
         expect(k?.name).toBe('Windows Credential Manager');
     });
 
+    it('returns null on Windows when the Credential Manager reader is unavailable', () => {
+        const k = selectKeychain(
+            { service: 's', account: 'a' },
+            { platform: 'win32', runner: ALWAYS_FAIL_RUNNER },
+        );
+        expect(k).toBeNull();
+    });
+
     it('returns the Linux backend on linux when secret-tool is present', () => {
         const k = selectKeychain(
             { service: 's', account: 'a' },

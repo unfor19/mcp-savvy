@@ -8,7 +8,13 @@ import { WindowsCredentialManager } from './windows.js';
 import { LinuxSecretService } from './linux.js';
 import type { Runner } from '../runner.js';
 
-export type { KeychainBackend, KeychainBackendOptions } from './types.js';
+export type {
+    KeychainBackend,
+    KeychainBackendOptions,
+    KeychainReadFailureCategory,
+    KeychainReadResult,
+} from './types.js';
+export { KeychainReadError } from './types.js';
 export type { Runner, RunResult } from '../runner.js';
 export { nodeRunner } from '../runner.js';
 export { MacOSKeychain } from './macos.js';

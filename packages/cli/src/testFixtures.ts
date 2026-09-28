@@ -5,9 +5,15 @@
 
 import type { Logger, TokenData } from '@mcp-savvy/core';
 import type { AuthProvider, AuthorizePrep } from '@mcp-savvy/auth';
-import type { LockCoordinator, TokenStore } from '@mcp-savvy/storage';
+import type {
+    LockCoordinator,
+    TokenStore,
+    TokenStoreBackendMetadata,
+} from '@mcp-savvy/storage';
 import type { CallbackServer } from '@mcp-savvy/server';
 import type { CliConfig } from './env.js';
+import type { EffectiveCacheIdentity } from './identity/index.js';
+import type { AuthDiagnosticEmitter } from './tokens/index.js';
 
 /** Build a fresh `TokenData` that's still valid for `seconds` more. */
 export function tokenData(overrides?: Partial<TokenData>): TokenData {
@@ -169,9 +175,43 @@ export const TEST_CONFIG: CliConfig = {
     dataDir: '/tmp/mcp-savvy-test',
 };
 
+/** Shared safe identity used by command dependency fixtures. */
+export const TEST_EFFECTIVE_IDENTITY: EffectiveCacheIdentity = {
+    namespace: 'test-namespace',
+    dataDir: '/tmp/mcp-savvy-test',
+    fingerprint: 'effective1234567',
+    componentFingerprints: {
+        issuer: 'issuer1234567890',
+        clientId: 'client1234567890',
+        namespace: 'namespace123456',
+        dataDir: 'dataDir123456789',
+    },
+};
+
+/** Shared backend precedence used by command dependency fixtures. */
+export const TEST_BACKEND_METADATA: TokenStoreBackendMetadata = {
+    available: ['test keychain', 'encrypted file'],
+    preferred: 'test keychain',
+};
+
+/** No-op diagnostic emitter used by command dependency fixtures. */
+export const TEST_DIAGNOSTICS: AuthDiagnosticEmitter = {
+    initialization: () => undefined,
+    backendRead: () => undefined,
+    credential: () => undefined,
+    refresh: () => undefined,
+    interactiveSignIn: () => undefined,
+    lockTimeout: () => undefined,
+    reauthentication: () => undefined,
+};
+
 /** Shared lock/namespace/timeout values for `CommandDeps` constructions. */
 export const TEST_LOCK_DEPS = {
     lock: fakeLockCoordinator(),
-    namespace: 'test-namespace',
+    namespace: TEST_EFFECTIVE_IDENTITY.namespace,
     lockTimeoutMs: 300_000,
+    preferIdentityToken: false,
+    diagnostics: TEST_DIAGNOSTICS,
+    effectiveIdentity: TEST_EFFECTIVE_IDENTITY,
+    backendMetadata: TEST_BACKEND_METADATA,
 };

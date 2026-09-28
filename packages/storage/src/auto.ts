@@ -4,40 +4,65 @@
  * preferred one becomes available.
  */
 
-import type { TokenData, Logger } from '@mcp-savvy/core';
+import type { Logger, TokenData } from '@mcp-savvy/core';
 import { TokenStoreError } from '@mcp-savvy/core';
-import type { TokenStore, TokenStoreOptions } from './types.js';
 import { EncryptedFileTokenStore } from './encryptedFile.js';
 import { selectKeychain, type KeychainBackend } from './keychain/index.js';
+import { isTokenData } from './tokenValidation.js';
+import type { TokenStore, TokenStoreOptions } from './types.js';
 
 const ACCOUNT = 'tokens';
+const FILE_BACKEND_NAME = 'encrypted file';
+
+/** Stable, safe outcome from reading a token-store backend. */
+export type CredentialReadReason =
+    | 'credential-found'
+    | 'credential-missing'
+    | 'credential-unreadable-local-entry'
+    | 'credential-invalid';
+
+/** One attempted backend read, without credential values. */
+export interface BackendReadEvent {
+    /** Backend that produced the outcome. */
+    backend: string;
+    /** Safe classification of the local read result. */
+    reason: CredentialReadReason;
+    /** Whether this backend supplied the returned credential. */
+    selected: boolean;
+}
+
+/** Available storage backends and deterministic precedence. */
+export interface TokenStoreBackendMetadata {
+    /** Backends available to this store, in precedence order. */
+    available: readonly string[];
+    /** Backend attempted first for reads and writes. */
+    preferred: string;
+}
+
+/** Receive safe backend-read classifications for diagnostic wiring. */
+export type BackendReadObserver = (event: BackendReadEvent) => void;
 
 /** Compose the keychain service name for a namespace. */
 function keychainService(namespace: string): string {
     return `mcp-savvy/${namespace}`;
 }
 
-/**
- * Internal options for `AutoTokenStore`. Tests use the optional
- * `keychain` and `file` overrides to inject fakes; production code
- * passes only `TokenStoreOptions` and lets the constructor pick.
- */
+/** Internal construction options with test and diagnostic seams. */
 export interface AutoTokenStoreInternalOptions extends TokenStoreOptions {
     /** Override the keychain backend. Tests pass a fake, prod leaves unset. */
     keychain?: KeychainBackend | null;
     /** Override the encrypted-file backend. Tests pass a fake, prod leaves unset. */
     file?: TokenStore;
+    /** Observe only safe, token-free backend read classifications. */
+    onBackendRead?: BackendReadObserver;
 }
 
-/**
- * Token store that prefers the OS keychain, falls back to an
- * encrypted file. The fallback is constructed eagerly so the keychain
- * backend can be missing without surprising the caller.
- */
+/** Token store with deterministic keychain-first fallback behavior. */
 export class AutoTokenStore implements TokenStore {
     private readonly keychain: KeychainBackend | null;
     private readonly file: TokenStore;
     private readonly logger?: Logger;
+    private readonly onBackendRead?: BackendReadObserver;
 
     constructor(opts: AutoTokenStoreInternalOptions, logger?: Logger) {
         this.keychain =
@@ -49,27 +74,56 @@ export class AutoTokenStore implements TokenStore {
                 });
         this.file = opts.file ?? new EncryptedFileTokenStore(opts);
         this.logger = logger;
+        this.onBackendRead = opts.onBackendRead;
     }
 
-    /** Human-readable label for the active backend. */
+    /** Human-readable label for the preferred backend. */
     get backendName(): string {
-        return this.keychain ? this.keychain.name : 'encrypted file';
+        return this.backendMetadata.preferred;
     }
 
-    /** Read tokens from keychain first, then encrypted file. */
+    /** Return available backends in deterministic precedence order. */
+    get backendMetadata(): TokenStoreBackendMetadata {
+        const available = this.keychain
+            ? [this.keychain.name, FILE_BACKEND_NAME]
+            : [FILE_BACKEND_NAME];
+        return { available, preferred: available[0] as string };
+    }
+
+    /** Read valid tokens from keychain first, then the encrypted file. */
     async get(): Promise<TokenData | null> {
         if (this.keychain) {
-            const raw = this.keychain.get();
-            if (raw) return parseOrNull(raw);
+            const keychainResult = this.keychain.get();
+            if (keychainResult.status === 'found') {
+                const decoded = decodeStoredTokens(keychainResult.value);
+                if (decoded.tokens) {
+                    this.emitRead(this.keychain.name, 'credential-found', true);
+                    return decoded.tokens;
+                }
+                this.emitRead(this.keychain.name, decoded.reason, false);
+            } else {
+                const reason =
+                    keychainResult.status === 'missing'
+                        ? 'credential-missing'
+                        : 'credential-unreadable-local-entry';
+                this.emitRead(this.keychain.name, reason, false);
+            }
         }
-        return this.file.get();
+
+        const fileTokens = await this.file.get();
+        if (fileTokens === null) {
+            this.emitRead(FILE_BACKEND_NAME, 'credential-missing', false);
+            return null;
+        }
+        if (!isTokenData(fileTokens)) {
+            this.emitRead(FILE_BACKEND_NAME, 'credential-invalid', false);
+            return null;
+        }
+        this.emitRead(FILE_BACKEND_NAME, 'credential-found', true);
+        return fileTokens;
     }
 
-    /**
-     * Write tokens to the keychain when available; otherwise the
-     * encrypted file. After a successful keychain write we proactively
-     * clear any stale encrypted-file copy from a prior session.
-     */
+    /** Persist keychain-first and clear a superseded file only after success. */
     async set(tokens: TokenData): Promise<void> {
         const json = JSON.stringify(tokens);
         if (this.keychain) {
@@ -94,29 +148,58 @@ export class AutoTokenStore implements TokenStore {
         }
     }
 
-    /** Clear from both backends so we never serve stale data. */
+    /** Clear every populated backend and fail if any credential may remain. */
     async clear(): Promise<void> {
-        if (this.keychain) this.keychain.delete();
-        await this.file.clear();
+        const failures: unknown[] = [];
+        if (this.keychain) {
+            try {
+                const current = this.keychain.get();
+                if (current.status !== 'missing' && !this.keychain.delete()) {
+                    failures.push(new Error('keychain deletion failed'));
+                }
+            } catch (err) {
+                failures.push(err);
+            }
+        }
+        try {
+            await this.file.clear();
+        } catch (err) {
+            failures.push(err);
+        }
+        if (failures.length > 0) {
+            throw new TokenStoreError(
+                'TOKEN_STORE_CLEAR_FAILED',
+                'one or more token storage backends could not be cleared',
+                failures[0],
+            );
+        }
+    }
+
+    private emitRead(backend: string, reason: CredentialReadReason, selected: boolean): void {
+        this.onBackendRead?.({ backend, reason, selected });
     }
 }
 
-/**
- * Build the recommended `TokenStore` for the running process. This is
- * the function the CLI calls; library consumers can also invoke it
- * directly when they want the same defaults.
- */
+/** Build the recommended token store for the running process. */
 export function resolveTokenStore(opts: TokenStoreOptions, logger?: Logger): TokenStore {
     return new AutoTokenStore(opts, logger);
 }
 
-/** JSON.parse but returns null on any failure (including non-object). */
-function parseOrNull(json: string): TokenData | null {
+type DecodedTokens =
+    | { tokens: TokenData; reason: 'credential-found' }
+    | {
+        tokens: null;
+        reason: 'credential-unreadable-local-entry' | 'credential-invalid';
+    };
+
+function decodeStoredTokens(json: string): DecodedTokens {
+    let parsed: unknown;
     try {
-        const parsed = JSON.parse(json);
-        if (parsed && typeof parsed === 'object') return parsed as TokenData;
-        return null;
+        parsed = JSON.parse(json);
     } catch {
-        return null;
+        return { tokens: null, reason: 'credential-unreadable-local-entry' };
     }
+    return isTokenData(parsed)
+        ? { tokens: parsed, reason: 'credential-found' }
+        : { tokens: null, reason: 'credential-invalid' };
 }
