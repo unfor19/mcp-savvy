@@ -1,6 +1,6 @@
 {
     "name": "mcp-savvy",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Stdio MCP bridge for protected MCP servers — drop-in for npx -y mcp-savvy.",
     "license": "MIT",
     "homepage": "https://github.com/unfor19/mcp-savvy#readme",

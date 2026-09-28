@@ -48,6 +48,12 @@ flows such as AWS for SAP `USER_FEDERATION`. It enables the second loopback
 listener, authenticated session completion, and one automatic retry. Omit it
 for backends that never return such challenges.
 
+Bearer selection defaults to the OAuth access token. Set
+`MCP_SAVVY_BEARER_PREFERENCE=id` when the remote explicitly requires the OIDC
+identity token, or `auto` to enable AgentCore endpoint/session-completion
+detection. ID preference falls back to the access token when the token bundle
+has no ID token.
+
 First run opens a browser tab for sign-in and persists the token bundle in the
 OS keychain or encrypted-file fallback. Independent later processes with the
 same effective cache identity reuse or refresh it—even after the writer exits—

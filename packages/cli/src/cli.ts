@@ -67,6 +67,7 @@ Optional env vars:
   MCP_SAVVY_TOKEN_NAMESPACE  Override the keychain namespace
   MCP_SAVVY_BRAND_NAME     Brand label on the callback page
   MCP_SAVVY_COMPLETE_SESSION_URL  AgentCore interactive OAuth completion endpoint
+  MCP_SAVVY_BEARER_PREFERENCE  'access' (default) | 'auto' | 'id'
   MCP_SAVVY_TOOL_MODE      'passthrough' (default) | 'search-local' | 'search-gateway'
   MCP_SAVVY_TOOL_PREFIX    Prefix for synthetic tools in search-* modes (default 'mcp_savvy')
   MCP_SAVVY_DEBUG          '1' to enable debug logging
@@ -221,8 +222,7 @@ export function buildDeps(config: CliConfig): CommandDeps {
         lock,
         namespace,
         lockTimeoutMs: config.lockTimeoutMs,
-        preferIdentityToken:
-            config.completeSessionUrl !== undefined || isAgentCoreRemote(config.remoteUrl),
+        preferIdentityToken: config.bearerPreference === 'id' || (config.bearerPreference === 'auto' && (config.completeSessionUrl !== undefined || isAgentCoreRemote(config.remoteUrl))),
     };
 }
 

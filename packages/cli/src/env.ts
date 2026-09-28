@@ -9,6 +9,9 @@ import path from 'node:path';
 import { ConfigError, LockError } from '@mcp-savvy/core';
 import { parseCallbackHost, validateCredentialEndpoints } from './env/endpointPolicy.js';
 
+/** Supported bearer-token selection policies. */
+export type BearerPreference = 'auto' | 'access' | 'id';
+
 /** All known environment variables for the CLI. */
 export interface CliConfig {
     provider: 'cognito' | 'oidc';
@@ -22,6 +25,7 @@ export interface CliConfig {
     tokenNamespace: string | undefined;
     brandName: string | undefined;
     completeSessionUrl: string | undefined;
+    bearerPreference: BearerPreference;
     toolMode: 'passthrough' | 'search-local' | 'search-gateway';
     toolPrefix: string;
     debug: boolean;
@@ -47,6 +51,8 @@ export const DEFAULT_SCOPES = 'openid email profile';
 export const DEFAULT_CALLBACK_HOST = 'localhost';
 export const DEFAULT_CALLBACK_PORT = 33423;
 export const DEFAULT_CALLBACK_PATH = '/callback';
+/** Default bearer-token selection policy. */
+export const DEFAULT_BEARER_PREFERENCE: BearerPreference = 'access';
 /** Default tool mode. See FEATURES.md for the contract. */
 export const DEFAULT_TOOL_MODE = 'passthrough';
 /** Default tool prefix for `search-first` modes. Overridable for whitelabel. */
@@ -125,6 +131,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): CliConfig {
 
     const port = parsePort(env['MCP_SAVVY_CALLBACK_PORT']);
     const host = parseCallbackHost(env['MCP_SAVVY_CALLBACK_HOST'], DEFAULT_CALLBACK_HOST);
+    const bearerPreference = parseBearerPreference(env['MCP_SAVVY_BEARER_PREFERENCE']);
     const toolMode = parseToolMode(env['MCP_SAVVY_TOOL_MODE']);
     const toolPrefix = parseToolPrefix(env['MCP_SAVVY_TOOL_PREFIX']);
     const lockTimeoutMs = parseLockTimeout(env['MCP_SAVVY_LOCK_TIMEOUT_MS']);
@@ -155,6 +162,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): CliConfig {
         tokenNamespace: env['MCP_SAVVY_TOKEN_NAMESPACE']?.trim() || undefined,
         brandName: env['MCP_SAVVY_BRAND_NAME']?.trim() || undefined,
         completeSessionUrl: env['MCP_SAVVY_COMPLETE_SESSION_URL']?.trim() || undefined,
+        bearerPreference,
         toolMode,
         toolPrefix,
         debug: env['MCP_SAVVY_DEBUG'] === '1',
@@ -175,6 +183,18 @@ function parsePort(raw: string | undefined): number {
         );
     }
     return n;
+}
+
+/** Parse bearer preference; `auto` preserves AgentCore detection. */
+function parseBearerPreference(raw: string | undefined): BearerPreference {
+    const trimmed = raw?.trim();
+    if (!trimmed) return DEFAULT_BEARER_PREFERENCE;
+    if (trimmed !== 'auto' && trimmed !== 'access' && trimmed !== 'id') {
+        throw new ConfigError(
+            `MCP_SAVVY_BEARER_PREFERENCE must be 'auto', 'access', or 'id', got '${trimmed}'`,
+        );
+    }
+    return trimmed;
 }
 
 /**

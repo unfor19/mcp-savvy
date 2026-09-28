@@ -13,9 +13,12 @@ consent. Reauthorization remains necessary after revocation, an unusable or
 unrefreshable credential, a cache-key change, or an explicit forced-authentication
 request from the Runtime.
 
-The outer bearer selection is AgentCore-aware: mcp-savvy prefers an available
-OIDC ID token and falls back to the access token. Generic OAuth endpoints continue
-using access tokens.
+The outer bearer defaults to the OAuth access token, preserving established
+behavior for API audience/scope authorizers. Set
+`MCP_SAVVY_BEARER_PREFERENCE=id` when the authorizer explicitly requires the
+OIDC identity token, or `auto` to enable AgentCore endpoint/session-completion
+detection. ID preference falls back to the access token when no ID token is
+available.
 
 ## Supported authorization responses
 
@@ -35,7 +38,7 @@ Set `MCP_SAVVY_COMPLETE_SESSION_URL` when the upstream can return either form. W
 
 1. The MCP host starts mcp-savvy.
 2. mcp-savvy authenticates the human with the configured OIDC provider using Authorization Code + PKCE.
-3. It sends the selected user Bearer JWT to the protected AgentCore Gateway or Runtime endpoint: an available OIDC ID token is preferred, with access-token fallback.
+3. It sends the selected user Bearer JWT to the protected AgentCore Gateway or Runtime endpoint according to `MCP_SAVVY_BEARER_PREFERENCE`: `auto` applies endpoint/session-completion detection, `access` forces the OAuth access token, and `id` prefers an available ID token with access-token fallback.
 4. AgentCore validates the token and associates the request with that user identity.
 5. When a downstream resource needs consent, AgentCore returns a one-time authorization URL and session URI.
 6. mcp-savvy waits for exclusive ownership of `127.0.0.1:33424`, validates the
@@ -56,7 +59,7 @@ The first callback and second callback are distinct:
 
 ### What the design guarantees
 
-- The Gateway/Runtime request starts with the selected OIDC Bearer token for the person who authenticated to the MCP client: ID token when available, otherwise access token.
+- The Gateway/Runtime request starts with the selected OIDC Bearer token for the person who authenticated to the MCP client, using the configured bearer preference and access-token fallback for `id`.
 - `CompleteResourceTokenAuth` binds the browser-completed resource authorization to that initiating AgentCore user context.
 - SAP `USER_FEDERATION` obtains a user-specific SAP OAuth token rather than a shared client-credentials token.
 - SAP applies the roles of the SAP user represented by that SAP token.

@@ -166,6 +166,7 @@ export const TEST_CONFIG: CliConfig = {
     tokenNamespace: undefined,
     brandName: undefined,
     completeSessionUrl: undefined,
+    bearerPreference: 'auto',
     toolMode: 'passthrough',
     toolPrefix: 'mcp_savvy',
     debug: false,

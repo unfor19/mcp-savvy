@@ -46,9 +46,12 @@ scopes should not by itself trigger SAP consent again. A new consent flow is
 expected when no matching credential remains usable or the Runtime explicitly
 forces authentication.
 
-mcp-savvy prefers an available OIDC ID token as the AgentCore bearer and falls
-back to the access token; generic OAuth endpoints continue using access tokens.
-It supports
+mcp-savvy uses OAuth access tokens by default, preserving its established
+behavior and working with API audience/scope authorizers. Set
+`MCP_SAVVY_BEARER_PREFERENCE=id` when the remote explicitly requires the OIDC
+identity token, or `auto` to enable AgentCore endpoint/session-completion
+detection. ID preference falls back to the access token when no ID token is
+available. It supports
 Gateway `-32042` URL elicitations and the tested AWS for SAP Runtime
 `requires_user_action` result. If you change versions, reconnect the MCP server;
 do not refresh a consumed authorization URL.

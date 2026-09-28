@@ -165,6 +165,8 @@ export async function printEnv(config: CliConfig, deps: CommandDeps): Promise<nu
         preferredBackend: deps.backendMetadata.preferred,
         brandName: config.brandName,
         completeSessionUrl: config.completeSessionUrl,
+        bearerPreference: config.bearerPreference,
+        resolvedBearerPreference: deps.preferIdentityToken ? 'id' : 'access',
         toolMode: config.toolMode,
         toolPrefix: config.toolPrefix,
         debug: config.debug,

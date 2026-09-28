@@ -233,6 +233,8 @@ describe('printEnv', () => {
                 componentFingerprints: LOCK_DEPS.effectiveIdentity.componentFingerprints,
                 availableBackends: LOCK_DEPS.backendMetadata.available,
                 preferredBackend: LOCK_DEPS.backendMetadata.preferred,
+                bearerPreference: 'auto',
+                resolvedBearerPreference: 'access',
             },
         });
         expect(JSON.stringify(records[0])).not.toContain('complete-client-id-must-not-appear');

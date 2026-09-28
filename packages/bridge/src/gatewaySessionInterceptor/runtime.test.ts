@@ -17,16 +17,15 @@ const RUNTIME_AUTHORIZATION_RESPONSE: JSONRPCMessage = {
     id: 7,
     result: {
         structuredContent: {
-            result: {
-                success: false,
-                message: 'Authentication required. Please authenticate using the provided URL.',
-                data: {
-                    error_type: 'authentication_required',
-                    requires_user_action: true,
-                    auth_url:
-                        'https://bedrock-agentcore.us-east-1.amazonaws.com/identities/oauth2/authorize?request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Asap-session-1',
-                },
+            success: false,
+            message: 'Authentication required. Please authenticate using the provided URL.',
+            data: {
+                error_type: 'authentication_required',
+                requires_user_action: true,
+                auth_url:
+                    'https://bedrock-agentcore.us-east-1.amazonaws.com/identities/oauth2/authorize?request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3Asap-session-1',
             },
+            metadata: {},
         },
     },
 };

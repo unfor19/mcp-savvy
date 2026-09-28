@@ -140,7 +140,8 @@ function extractRuntimeElicitation(msg: JSONRPCMessage): UrlElicitation | null {
     if (!isJSONRPCResultResponse(msg)) return null;
     const result = asRecord(msg.result);
     const structuredContent = asRecord(result?.['structuredContent']);
-    const toolResult = asRecord(structuredContent?.['result']);
+    const nestedToolResult = asRecord(structuredContent?.['result']);
+    const toolResult = nestedToolResult ?? structuredContent;
     const data = asRecord(toolResult?.['data']);
     if (data?.['requires_user_action'] !== true) return null;
     const url = data['auth_url'];

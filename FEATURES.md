@@ -94,10 +94,12 @@ When `MCP_SAVVY_COMPLETE_SESSION_URL` is configured, the bridge handles both:
 3. Requires callback `session_id` to exactly equal the authorization URL's
    opaque `request_uri`.
 4. POSTs `{ sessionUri }` with the current user Bearer JWT to the configured
-   completion API. For AgentCore endpoints, mcp-savvy prefers an available OIDC
-   ID token and falls back to the access token; generic OAuth endpoints retain
-   access-token behavior. The API calls `CompleteResourceTokenAuth`; the token is
-   not duplicated in the JSON body.
+   completion API. The default `MCP_SAVVY_BEARER_PREFERENCE=access` preserves
+   OAuth API audience/scope behavior. Set `id` when the authorizer explicitly
+   requires the OIDC identity token, or `auto` to enable AgentCore endpoint and
+   session-completion detection. ID preference retains access-token fallback.
+   The API calls `CompleteResourceTokenAuth`; the token is not duplicated in
+   the JSON body.
 5. Retries the original tool call once after successful binding.
 
 The dispatcher allows only one interceptor to own a request ID at a time, dropping
