@@ -131,7 +131,9 @@ the file, source, and finding kind, never bytes from the matched value.
 
 We use the OS-native keychain when available:
 
-- **macOS** — [`security`](https://ss64.com/osx/security.html) (Keychain Access)
+- **macOS** — the system `osascript` calling
+  [Keychain Services](https://developer.apple.com/documentation/security/keychain-services)
+  (Security.framework); entries appear in Keychain Access
 - **Windows** — `cmdkey` + PowerShell against
   [Credential Manager](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc754796(v=ws.11))
 - **Linux** —
@@ -145,6 +147,11 @@ We **shell out** rather than using a native Node module like
 the PowerShell `CredentialManager` module and Linux requires `secret-tool`. If
 the required reader is unavailable, mcp-savvy selects encrypted-file storage
 instead of writing a keychain entry it cannot later read.
+
+On macOS the entry is created by `osascript`, so its access list trusts
+`osascript`. Any process running as the same user can read these tokens through
+`osascript` without a prompt. The keychain protects tokens from other users and
+from offline disk access, not from code already running as you.
 
 #### Encrypted-file fallback
 
@@ -160,8 +167,10 @@ treated as evidence that the keychain is empty.
 
 A successful keychain replacement removes the superseded encrypted-file copy
 only after persistence succeeds. If keychain persistence fails, mcp-savvy
-preserves and writes the encrypted fallback. If neither backend can persist the
-replacement, authentication fails rather than claiming success. The encrypted
+preserves and writes the encrypted fallback, then removes the older keychain
+entry so it cannot shadow the newer file copy. If neither backend can persist
+the replacement, authentication fails rather than claiming success and the
+existing keychain entry is left untouched. The encrypted
 file is **defense in depth**, not a security boundary against a local attacker —
 see "Out of scope" below.
 

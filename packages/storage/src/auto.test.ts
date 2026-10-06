@@ -1,23 +1,16 @@
 /**
- * Tests for deterministic `AutoTokenStore` precedence and persistence.
+ * Tests for deterministic `AutoTokenStore` backend metadata and read precedence.
+ * Persistence tests live in `auto/persistence.test.ts`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { TokenData } from '@mcp-savvy/core';
-import { TokenStoreError } from '@mcp-savvy/core';
 import { AutoTokenStore, resolveTokenStore, type BackendReadEvent } from './auto.js';
-import { KeychainReadError, type KeychainBackend } from './keychain/index.js';
-import type { TokenStore } from './types.js';
-
-const sampleTokens: TokenData = {
-    access_token: 'a',
-    refresh_token: 'r',
-    id_token: 'i',
-    expires_at: 1_700_000_000_000,
-};
+import { fakeFile, fakeKeychain, sampleTokens } from './auto/testFixtures.js';
+import { KeychainReadError } from './keychain/index.js';
 
 let fakeHome: string;
 
@@ -28,48 +21,6 @@ beforeEach(() => {
 afterEach(() => {
     rmSync(fakeHome, { recursive: true, force: true });
 });
-
-/** Build a fake keychain backend with controllable methods. */
-function fakeKeychain(): KeychainBackend & {
-    store: Map<string, string>;
-    setShouldFail: boolean;
-} {
-    const store = new Map<string, string>();
-    const backend = {
-        name: 'Fake Keychain',
-        store,
-        setShouldFail: false,
-        isAvailable: () => true,
-        get: () => {
-            const value = store.get('value');
-            return value === undefined
-                ? { status: 'missing' as const }
-                : { status: 'found' as const, value };
-        },
-        set(value: string) {
-            if (backend.setShouldFail) return false;
-            store.set('value', value);
-            return true;
-        },
-        delete() {
-            store.delete('value');
-            return true;
-        },
-    };
-    return backend;
-}
-
-function fakeFile(tokens: TokenData | null): TokenStore & {
-    get: ReturnType<typeof vi.fn>;
-    set: ReturnType<typeof vi.fn>;
-    clear: ReturnType<typeof vi.fn>;
-} {
-    return {
-        get: vi.fn(async () => tokens),
-        set: vi.fn(async () => undefined),
-        clear: vi.fn(async () => undefined),
-    };
-}
 
 describe('backend metadata', () => {
     it('reports deterministic keychain-first precedence', () => {
@@ -200,86 +151,6 @@ describe('read precedence', () => {
             reason: 'credential-invalid',
             selected: false,
         });
-    });
-});
-
-describe('persistence', () => {
-    it('writes to keychain then clears a superseded file', async () => {
-        const keychain = fakeKeychain();
-        const file = fakeFile(sampleTokens);
-        const store = new AutoTokenStore({ namespace: 'write', keychain, file });
-
-        await store.set(sampleTokens);
-        expect(keychain.store.get('value')).toBe(JSON.stringify(sampleTokens));
-        expect(file.clear).toHaveBeenCalledOnce();
-        expect(file.set).not.toHaveBeenCalled();
-    });
-
-    it('uses and preserves the file when keychain persistence fails', async () => {
-        const keychain = fakeKeychain();
-        keychain.setShouldFail = true;
-        const file = fakeFile(sampleTokens);
-        const store = new AutoTokenStore({ namespace: 'write', keychain, file });
-
-        await store.set(sampleTokens);
-        expect(file.set).toHaveBeenCalledWith(sampleTokens);
-        expect(file.clear).not.toHaveBeenCalled();
-    });
-
-    it('wraps all-backend persistence failure', async () => {
-        const keychain = fakeKeychain();
-        keychain.setShouldFail = true;
-        const file = fakeFile(sampleTokens);
-        file.set.mockRejectedValue(new Error('synthetic failure'));
-        const store = new AutoTokenStore({ namespace: 'write', keychain, file });
-
-        await expect(store.set(sampleTokens)).rejects.toMatchObject({
-            code: 'TOKEN_STORE_WRITE_FAILED',
-        });
-    });
-
-    it('fails when a populated keychain entry cannot be deleted but still clears the file', async () => {
-        const keychain = fakeKeychain();
-        keychain.store.set('value', JSON.stringify(sampleTokens));
-        keychain.delete = () => false;
-        const file = fakeFile(sampleTokens);
-        const store = new AutoTokenStore({ namespace: 'clear', keychain, file });
-
-        await expect(store.clear()).rejects.toMatchObject({
-            code: 'TOKEN_STORE_CLEAR_FAILED',
-        });
-        expect(file.clear).toHaveBeenCalledOnce();
-        expect(keychain.store.has('value')).toBe(true);
-    });
-
-    it('treats an already-missing keychain entry as a successful clear', async () => {
-        const keychain = fakeKeychain();
-        keychain.delete = () => false;
-        const file = fakeFile(sampleTokens);
-        const store = new AutoTokenStore({ namespace: 'clear', keychain, file });
-
-        await expect(store.clear()).resolves.toBeUndefined();
-        expect(file.clear).toHaveBeenCalledOnce();
-    });
-
-    it('retains encrypted-file compatibility when no keychain is available', async () => {
-        const store = new AutoTokenStore({
-            namespace: 'file-only',
-            homedir: fakeHome,
-            keychain: null,
-        });
-        await store.set(sampleTokens);
-        expect(await store.get()).toEqual(sampleTokens);
-        expect(existsSync(join(fakeHome, '.mcp-savvy', 'file-only', 'tokens.enc'))).toBe(true);
-    });
-
-    it('surfaces file-only write failures as TokenStoreError', async () => {
-        const store = new AutoTokenStore({
-            namespace: 'file-only',
-            homedir: '/dev/null/cannot-write',
-            keychain: null,
-        });
-        await expect(store.set(sampleTokens)).rejects.toBeInstanceOf(TokenStoreError);
     });
 });
 
