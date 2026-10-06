@@ -167,7 +167,7 @@ describe('set', () => {
 });
 
 describe('delete', () => {
-    it('returns true on success', () => {
+    it('deletes through Keychain Services without reading the secret', () => {
         const r = recordingRunner();
         const k = new MacOSKeychain({
             service: SERVICE,
@@ -176,6 +176,16 @@ describe('delete', () => {
             runner: r.runner,
         });
         expect(k.delete()).toBe(true);
+        const call = r.calls[0];
+        expect(call?.cmd).toBe('/usr/bin/osascript');
+        expect(call?.args.slice(-3)).toEqual(['--', SERVICE, ACCOUNT]);
+        const scriptIndex = call?.args.indexOf('-e') ?? -1;
+        const script = call?.args[scriptIndex + 1] ?? '';
+        expect(script).toContain('SecItemDelete');
+        expect(script).toContain('errSecItemNotFound');
+        expect(script).not.toContain('SecItemCopyMatching');
+        expect(script).not.toContain('kSecReturnData');
+        expect(script).not.toContain('delete-generic-password');
     });
 
     it('returns false on failure', () => {

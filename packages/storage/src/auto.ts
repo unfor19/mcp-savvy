@@ -146,6 +146,22 @@ export class AutoTokenStore implements TokenStore {
                 cause,
             );
         }
+        if (this.keychain) this.dropStaleKeychainEntry(this.keychain);
+    }
+
+    /**
+     * Remove a keychain entry the fresh file copy supersedes. Reads prefer the
+     * keychain, so a surviving older entry would shadow the newer tokens.
+     */
+    private dropStaleKeychainEntry(keychain: KeychainBackend): void {
+        try {
+            if (keychain.delete() || isEntryMissing(keychain)) return;
+        } catch {
+            // Fall through to the warning below.
+        }
+        this.logger?.warn(
+            `stale ${keychain.name} entry could not be removed; it may shadow newer tokens in the encrypted file`,
+        );
     }
 
     /** Clear every populated backend and fail if any credential may remain. */
@@ -153,8 +169,10 @@ export class AutoTokenStore implements TokenStore {
         const failures: unknown[] = [];
         if (this.keychain) {
             try {
-                const current = this.keychain.get();
-                if (current.status !== 'missing' && !this.keychain.delete()) {
+                // Delete first so an unreadable entry (denied prompt, integrity
+                // failure) can still be removed. Some backends report an absent
+                // entry as a failed delete, so probe only when delete says false.
+                if (!this.keychain.delete() && !isEntryMissing(this.keychain)) {
                     failures.push(new Error('keychain deletion failed'));
                 }
             } catch (err) {
@@ -183,6 +201,15 @@ export class AutoTokenStore implements TokenStore {
 /** Build the recommended token store for the running process. */
 export function resolveTokenStore(opts: TokenStoreOptions, logger?: Logger): TokenStore {
     return new AutoTokenStore(opts, logger);
+}
+
+/** True only when the backend positively reports no entry; read errors mean "not known missing". */
+function isEntryMissing(keychain: KeychainBackend): boolean {
+    try {
+        return keychain.get().status === 'missing';
+    } catch {
+        return false;
+    }
 }
 
 type DecodedTokens =

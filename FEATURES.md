@@ -241,7 +241,7 @@ keyword filter.
 
 Native keychain via:
 
-- **macOS** — `security` (Keychain Access)
+- **macOS** — `osascript` calling Keychain Services (entries show in Keychain Access)
 - **Windows** — `cmdkey` + PowerShell against Credential Manager
 - **Linux** — `secret-tool` (libsecret)
 
@@ -254,8 +254,9 @@ operational failures fail closed without reading the fallback.
 
 When a replacement can be written to the keychain, mcp-savvy removes the
 superseded encrypted-file copy only after the keychain write succeeds. If the
-keychain write fails, it preserves and writes the encrypted fallback; if no
-backend can persist the replacement, authentication reports a storage failure.
+keychain write fails, it preserves and writes the encrypted fallback and removes
+the older keychain entry so it cannot shadow the newer tokens; if no backend can
+persist the replacement, authentication reports a storage failure.
 
 The token namespace defaults to a slug of the issuer host plus the
 first 8 chars of `sha256(clientId)`, so two protected MCPs on the

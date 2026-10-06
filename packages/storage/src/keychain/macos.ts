@@ -93,6 +93,26 @@ function run(argv) {
 }
 `;
 
+const DELETE_PASSWORD_JXA = String.raw`
+ObjC.import('Foundation');
+ObjC.import('Security');
+
+function run(argv) {
+    const secClass = ObjC.castRefToObject($.kSecClass);
+    const genericPassword = ObjC.castRefToObject($.kSecClassGenericPassword);
+    const attrService = ObjC.castRefToObject($.kSecAttrService);
+    const attrAccount = ObjC.castRefToObject($.kSecAttrAccount);
+    const query = $.NSMutableDictionary.alloc.init;
+    query.setObjectForKey(genericPassword, secClass);
+    query.setObjectForKey($(argv[0]), attrService);
+    query.setObjectForKey($(argv[1]), attrAccount);
+    const status = $.SecItemDelete(query);
+    if (status !== Number($.errSecSuccess) && status !== Number($.errSecItemNotFound)) {
+        throw new Error('Keychain delete failed with status ' + status);
+    }
+}
+`;
+
 /** Constructor options for `MacOSKeychain`. */
 export interface MacOSKeychainOptions extends KeychainBackendOptions {
     /** Override the subprocess runner. Tests pass a fake; prod leaves unset. */
@@ -160,14 +180,19 @@ export class MacOSKeychain implements KeychainBackend {
         }
     }
 
-    /** Best-effort delete; returns true if the entry was removed. */
+    /**
+     * Delete through Keychain Services without reading the secret.
+     * An already-absent entry counts as success; any other failure is false.
+     */
     delete(): boolean {
         try {
-            this.runner.run('security', [
-                'delete-generic-password',
-                '-s',
+            this.runner.run('/usr/bin/osascript', [
+                '-l',
+                'JavaScript',
+                '-e',
+                DELETE_PASSWORD_JXA,
+                '--',
                 this.service,
-                '-a',
                 this.account,
             ]);
             return true;
